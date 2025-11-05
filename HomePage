@@ -1,0 +1,437 @@
+import { ReadPageComponent } from "@hms.core.readerservice.readerComponent"
+import { autoFillManager } from "@kit.AbilityKit"
+import { IconType } from "@kit.ArkUI"
+
+interface Swiper{
+  icon:ResourceStr
+}
+interface show {
+  title: string
+  introduction: string
+  photo: ResourceStr
+  price:number
+}
+interface HomePageClass {
+  text: string
+  icon: ResourceStr
+}
+@ComponentV2
+
+export struct HomePage {
+  HomePageData1: HomePageClass[] = [
+    { text: '音乐节', icon: $r('app.media.musicparty') },
+    { text: 'Livehouse', icon: $r('app.media.2') },
+    { text: '舞蹈舞剧', icon: $r('app.media.dance') },
+    { text: '脱口秀', icon: $r('app.media.show') },
+    { text: '相声曲艺', icon: $r('app.media.3') },
+  ]
+  HomePageData2: HomePageClass[] = [
+    { text: '沉浸式演出', icon: $r('app.media.dancing') },
+    { text: '展览', icon: $r('app.media.exhibitian') },
+    { text: '音乐会', icon: $r('app.media.musicmeet') },
+    { text: '儿童亲子', icon: $r('app.media.1') },
+    { text: '今日秒杀', icon: $r('app.media.today') },
+  ]
+  HomePageData3: HomePageClass[] = [
+    { text: '演出日历', icon: $r('app.media.canlender') },
+    { text: '大麦榜单', icon: $r('app.media.movie') },
+    { text: '团购券', icon: $r('app.media.rank') },
+    { text: '周边商城', icon: $r('app.media.market') },
+    { text: '全部', icon: $r('app.media.all') },
+  ]
+  showdata: show[] = [
+    {
+      title: '话剧',
+      introduction: "中国国家话剧院演出",
+      photo: $r('app.media.red'),
+      price: 50
+    },
+    {
+      title: '演唱会',
+      introduction: "马建涛巡回演唱会",
+      photo: $r('app.media.majiaotao'),
+      price: 199
+    },
+    {
+      title: '演唱会',
+      introduction: "2025毕雯珺“毕达之地”",
+      photo: $r('app.media.bi'),
+      price: 380
+    },
+    {
+      title: '音乐节',
+      introduction: "北京欢乐谷惊奇潮玩节",
+      photo: $r('app.media.red'),
+      price: 299
+    },
+    {
+      title: '演唱会',
+      introduction: "声声不息演唱会",
+      photo: $r('app.media.majiaotao'),
+      price: 99
+    },
+  ]
+  swiperList: Swiper[] = [
+    { icon: ($r("app.media.ad1")) },
+    { icon: ($r("app.media.ad2")) },
+    { icon: ($r("app.media.ad3")) },
+    { icon: ($r("app.media.ad4")) }
+  ]
+
+  build() {
+    Column() {
+      Row() {
+        // 左侧 Ai 图标
+        Image($r("app.media.ai"))
+          .width(28)
+          .height(28)
+          .margin({ right: 8 })
+
+        // 整个搜索栏部分
+        Row() {
+          // 城市选择
+          Text("北京")
+            .fontColor("#000")
+            .margin({ right: 6 })
+
+          // 输入框
+          TextInput({ placeholder: '张杰' })
+            .placeholderColor('#817D83')
+            .fontColor('#333')
+            .layoutWeight(1)
+            .backgroundColor(Color.Transparent)
+            .margin({ right: 6 })
+
+          // 扫一扫图标
+          Image($r("app.media.sacn"))
+            .width(24)
+            .height(24)
+            .margin({ right: 10 })
+
+          // 搜索按钮
+          Button("搜索")
+            .fontColor("#fff")
+            .backgroundColor('#FF6600')
+            .height(35)
+            .padding({ left: 12, right: 12 })
+            .borderRadius(6)
+        }
+        // 这个是关键：黑色边框容器
+        .border({
+          color: '#000', // 黑色边框
+          width: 2,
+          radius: 8
+        })
+        .padding({ left: 6, right: 6 })
+        .height(40)
+        .layoutWeight(1)
+        .backgroundColor(Color.White)
+      }
+      .width('100%')
+      .height(60)
+      .backgroundColor(Color.White)
+      .padding({ left: 10, right: 10 })
+
+      //图标区域1
+      Row() {
+        ForEach(this.HomePageData1, (item: HomePageClass, index: number) => {
+          Column() {
+            Image(item.icon)
+              .width(35)
+              .height(35)
+              .fillColor(Color.Orange)
+            Text(item.text)
+              .height(30)
+              .fontSize(12)// 调整字体大小适配
+              .fontWeight(FontWeight.Bold)
+              .textAlign(TextAlign.Center) // 文字水平居中!!!
+              .width('auto') // 自动适应文字宽度，避免截断
+          }
+          .width(60)
+          .margin({ right: 10 })
+        })
+      }
+      .justifyContent(FlexAlign.SpaceEvenly) // 图标项均匀分布在一行
+      .width("100%")
+      .height(80)
+
+      //图标区域2
+      Row() {
+        ForEach(this.HomePageData2, (item: HomePageClass, index: number) => {
+          Column() {
+            Image(item.icon)
+              .width(35)
+              .height(35)
+              .fillColor(Color.Orange)
+            Text(item.text)
+              .height(30)
+              .fontSize(12)// 调整字体大小适配
+              .fontWeight(FontWeight.Bold)
+              .textAlign(TextAlign.Center) // 文字水平居中
+              .width('auto') // 自动适应文字宽度，避免截断
+          }
+          .width(60)
+          .margin({ right: 10 })
+        })
+      }
+      .justifyContent(FlexAlign.SpaceEvenly) // 图标项均匀分布在一行
+      .width("100%")
+      .height(80)
+
+      //图标区域3
+      Row() {
+        ForEach(this.HomePageData3, (item: HomePageClass, index: number) => {
+          Column() {
+            Image(item.icon)
+              .width(35)
+              .height(35)
+              .fillColor(Color.Orange)
+            Text(item.text)
+              .height(30)
+              .fontSize(12)// 调整字体大小适配
+              .fontWeight(FontWeight.Bold)
+              .textAlign(TextAlign.Center) // 文字水平居中
+              .width('auto') // 自动适应文字宽度，避免截断
+          }
+          .margin({ right: 10 })
+          .width(60)
+        })
+      }
+      .justifyContent(FlexAlign.SpaceEvenly) // 图标项均匀分布在一行
+      .width("100%")
+      .height(80)
+
+      //抢票区域
+      Row() {
+        Column() {
+          Row() {
+            Text("抢票播报站")
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .margin({ right: 8 })
+            Text("张学友广州")
+              .fontSize(12)
+              .fontColor('#666')
+              .margin({ right: 5 })
+            Image($r('app.media.right'))
+              .width(16)
+              .height(16)
+              .fillColor(Color.White)
+              .backgroundColor(Color.Black)
+              .border({ radius: 5 })
+          }
+          .width('100%')
+          .margin({ bottom: 9 })
+
+          Row() {
+            Image($r('app.media.lu'))
+              .width(35)
+              .height(55)
+              .borderRadius(4)
+              .margin({ right: 6 })
+
+            Column() {
+              Row() {
+                Text("鹭卓 2025 Ready")
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Bold)
+                  .maxLines(2)
+              }
+              .margin({ bottom: 10 })
+
+              Row() {
+                Text("01:19:55")
+                  .fontSize(12)
+                  .fontColor('#333')
+                  .fontWeight(FontWeight.Bold)
+                  .padding({ top: 5, bottom: 5, left: 3 })
+                  .margin({ right: 18 })
+                Button("抢")
+                  .fontSize(12)
+                  .fontColor(Color.White)
+                  .backgroundColor('#FF6600')
+                  .width(45)
+                  .height(22)
+
+              }
+              .backgroundColor(Color.Pink)
+              .border({ radius: 10 })
+            }
+          }
+          .width('100%')
+        }
+        .alignItems(HorizontalAlign.Start) // 交叉轴（水平）左对齐
+        .width('45%')
+        .padding({
+          left: 8,
+          right: 8,
+          top: 6,
+          bottom: 6
+        })
+        .backgroundColor('#FFF8F2')
+        .borderRadius(8)
+        .margin({ right: 25 })
+
+        //新人见面礼
+        Column() {
+          Row() {
+            Text("新人见面礼")
+              .fontSize(16)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(Color.Orange)
+              .layoutWeight(1)
+            Image($r('app.media.right'))
+              .width(16)
+              .height(16)
+              .fillColor(Color.White)
+              .backgroundColor(Color.Black)
+              .border({ radius: 5 })
+          }
+          .width('100%')
+          .margin({ bottom: 9 })
+
+          Row() {
+            Image($r('app.media.discount'))
+              .width(35)
+              .height(55)
+              .borderRadius(4)
+              .margin({ right: 6 })
+
+            Column() {
+              Text("电影演出券包")
+                .fontSize(14)
+                .fontWeight(FontWeight.Bold)
+                .margin({ bottom: 4 })
+              Text("新人专享")
+                .fontSize(11)
+                .margin({ bottom: 4 })
+              Row() {
+                Text("去领取")
+                  .fontSize(12)
+                  .fontColor(Color.Orange)
+                  .fontWeight(FontWeight.Bold)
+                  .padding({
+                    top: 3,
+                    bottom: 3,
+                    left: 35,
+                    right: 35
+                  })
+              }
+
+
+              .backgroundColor(Color.Pink)
+              .border({ radius: 10 })
+            }
+            .alignItems(HorizontalAlign.Start)
+          }
+          .width('100%')
+        }
+        .alignItems(HorizontalAlign.Start) // 交叉轴（水平）左对齐
+        .width('45%')
+        .padding({
+          left: 8,
+          right: 8,
+          top: 6,
+          bottom: 6
+        })
+        .backgroundColor('#FFF8F2')
+        .borderRadius(8)
+      }
+      .margin({ bottom: 10 })
+
+      //必看演出
+      Row() {
+        Text("必看演出")
+          .fontSize(20)
+          .fontWeight(FontWeight.Bold)
+          .layoutWeight(1)
+        Text("全部")
+          .fontSize(14)
+        Image($r('app.media.rights'))
+          .width(12)
+      }
+      .width("100%")
+      .padding({ right: 15 })
+
+      List() {
+        ForEach(this.showdata, (item: show) => {
+          ListItem() {
+            Column() {
+              Stack() {
+                Image(item.photo)
+                  .width("100%")
+                  .border({ radius: 10 })
+                Text(item.title)
+                  .padding({
+                    left: 2,
+                    right: 2,
+                    top: 3,
+                    bottom: 3
+                  })
+                  .textAlign(TextAlign.Center)
+                  .border({ radius: 5 })
+                  .fontSize(10)
+                  .backgroundColor(Color.Black)
+                  .fontColor(Color.White)
+                  .fontWeight(FontWeight.Bold)
+                  .margin({ left: 5, top: 3 })
+
+              }
+              .alignContent(Alignment.TopStart)
+              .margin({ bottom: 4 })
+
+              Text(item.introduction)
+                .width("100%")
+                .maxLines(2)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .fontColor(Color.Black)
+                .fontWeight(FontWeight.Bold)
+                .margin({ bottom: 5 })
+              Row() {
+                Text("¥")
+                  .fontColor("#FF7F24")
+                  .margin({ right: 1 })
+                  .fontSize(10)
+                Text(item.price + "")
+                  .fontColor("#FF7F24")
+                  .margin({ right: 1 })
+                  .fontSize(16)
+                  .fontWeight(FontWeight.Bold)
+                Text("起")
+                  .fontColor(Color.Gray)
+                  .fontSize(10)
+              }
+              .width("auto")
+            }
+            .width("20%")
+            .margin({ right: 6 })
+            .backgroundColor(Color.White)
+            .alignItems(HorizontalAlign.Start)
+          }
+
+        })
+
+      }
+      .listDirection(Axis.Horizontal)
+
+      Swiper() {
+        ForEach(this.swiperList, (item: Swiper) => {
+          Image(item.icon)
+            .border({ radius: 10 })
+            .width("100%")
+            .height("100%")
+        })
+      }
+      .width("100%")
+      .height(200)
+      .autoPlay(true)
+    }
+
+    .padding({ right: 10, left: 10 })
+    .alignItems(HorizontalAlign.Start)
+    .width('100%')
+    .height('100%')
+    .backgroundColor(Color.White)
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+  }
+}
