@@ -1,0 +1,81 @@
+import { TabBarPosition } from "@kit.ArkUI";
+import { Find } from "./Find";
+import { HomePage } from "./HomePage";
+import { Mine } from "./Mine";
+import { Movie } from "./Movie";
+import { Vip } from "./Vip";
+
+// 跳转页面入口函数
+interface TabClass {
+  text: string
+  icon: ResourceStr
+}
+@Builder
+export function LayoutsBuilder() {
+  Layouts();
+}
+@ComponentV2
+struct Layouts {
+  @Local currentindex:number=0
+  pathStack: NavPathStack = new NavPathStack();
+  tabData: TabClass[] = [
+    {text: '首页', icon: $r('app.media.home')},
+    {text: '影院·场馆', icon: $r('app.media.movie')},
+    {text: '大麦VIP', icon: $r('app.media.vip')},
+    {text: '发现', icon: $r('app.media.find')},
+    {text: '我的', icon: $r('app.media.mine')}
+  ]
+  @Builder tabbuilder(item:TabClass,index:number){
+    Column({space:5})
+    {
+      Image(item.icon)
+        .width(24)
+        .fillColor(this.currentindex==index ? "#FF7F24":"#000000")
+
+      Text(item.text)
+        .fontSize(14)
+        .fontColor(this.currentindex==index ? "#FF7F24":"#000000")
+    }
+
+  }
+  build() {
+    NavDestination() {
+      Tabs({barPosition:BarPosition.End})
+      {ForEach(this.tabData,(item:TabClass,index:number)=>{
+        TabContent() {
+          if(this.currentindex==0)
+          {
+            HomePage()
+          }
+          else if(this.currentindex==1)
+          {
+            Movie()
+          }
+          else if(this.currentindex==2)
+          {
+            Vip()
+          }
+          else if(this.currentindex==3)
+          {
+            Find()
+          }
+          else if(this.currentindex==4)
+          {
+            Mine()
+          }
+        }
+        .expandSafeArea([SafeAreaType.SYSTEM],[SafeAreaEdge.TOP,SafeAreaEdge.BOTTOM])
+        .tabBar(this.tabbuilder(item,index))
+        .backgroundColor("#fff")
+      })
+
+      }
+      .expandSafeArea([SafeAreaType.SYSTEM],[SafeAreaEdge.TOP,SafeAreaEdge.BOTTOM])
+      .backgroundColor("#fff")
+      .onChange((index:number)=>{this.currentindex=index})
+    }
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+    })
+  }
+}
