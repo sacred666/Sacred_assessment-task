@@ -1,0 +1,35 @@
+import App from "@system.app";
+// 跳转页面入口函数
+@Builder
+export function AdBuilder() {
+  Ad();
+}
+@Component
+struct Ad {
+  pathStack: NavPathStack = new NavPathStack();
+  aboutToAppear(): void {
+    setTimeout(
+      ()=>{this.pathStack.replacePathByName("Layouts", null, false);},3000
+    )
+  }
+  build() {
+    NavDestination() {
+      Stack({alignContent:Alignment.TopEnd})
+      {
+        Image($r("app.media.adphoto"))
+          .width("100%")
+          .height("100%")
+          .expandSafeArea([SafeAreaType.SYSTEM],[SafeAreaEdge.TOP,SafeAreaEdge.BOTTOM])
+        Button("跳过")
+          .backgroundColor(Color.Gray)
+          .margin(15)
+          .onClick(()=>{this.pathStack.replacePathByName("Layouts", null, false);})
+      }
+    }
+
+
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack;
+    })
+  }
+}
