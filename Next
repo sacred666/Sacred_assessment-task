@@ -1,0 +1,23 @@
+
+import { AppStorageV2 } from "@kit.ArkUI";
+import { it } from "@ohos/hypium";
+// 跳转页面入口函数
+@Builder
+export function NextBuilder() {
+Next()
+}
+
+@ComponentV2
+struct Next {
+  pathStack : NavPathStack = new NavPathStack();
+  build() {
+    NavDestination() {
+     Image($r("app.media.ad2"))
+        .width("100%")
+    }
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack
+    })
+    .hideTitleBar(true)  // 隐藏标题栏
+  }
+}
