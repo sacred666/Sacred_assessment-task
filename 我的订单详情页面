@@ -1,20 +1,102 @@
-
 import { AppStorageV2 } from "@kit.ArkUI";
 import { it } from "@ohos/hypium";
+import { text } from "@kit.ArkGraphics2D";
+
 // 跳转页面入口函数
+interface data{
+  text: string
+}
 @Builder
 export function NextBuilder() {
 Next()
 }
-
 @ComponentV2
 struct Next {
-  pathStack : NavPathStack = new NavPathStack();
+
+
+pathStack : NavPathStack = new NavPathStack();
+  datas:data[]=[
+    { text: "演出/门票" },
+    { text: "团购券" },
+    { text: "电影" },
+    { text: "小食" },
+    { text: "商城" },
+    { text: "剧本杀" }
+  ]
   build() {
     NavDestination() {
-     Image($r("app.media.ad2"))
+      Column(){
+        //返回区域
+Row(){
+  Image($r("app.media.back"))
+    .width(30)
+    .margin({right:120})
+    .onClick(()=>{this.pathStack.pop()})
+  Text("我的订单")
+    .fontSize(22)
+    .layoutWeight(1)
+}
+.margin({bottom:20})
+.width("100%")
+        List(){
+ ForEach(this.datas,(item:data)=>{
+   ListItem(){
+     Text(item.text)
+       .fontSize(20)
+       .margin({right:25})
+   }
+ })
+        }
+        .scrollBar(BarState.Off)  // 隐藏滚动条
+        .listDirection(Axis.Horizontal)
         .width("100%")
+        .height(30)
+        .margin({bottom:10})
+        //虚线区域
+        Row(){
+
+        }
+        .backgroundColor("#efefef")
+        .width("100%")
+        .height(1)
+        .margin({bottom:10})
+        //全部区域
+        Row(){
+  Text("全部")
+    .fontSize(14)
+    .border({radius:20})
+    .padding({top:10,bottom:10,left:18,right:18})
+    .fontColor(Color.White)
+    .backgroundColor("#fd2b69")
+    .margin({right:15})
+          Text("待付款")
+            .fontSize(14)
+            .border({radius:20})
+            .padding({top:10,bottom:10,left:18,right:18})
+            .backgroundColor("#efefef")
+            .margin({right:15})
+          Text("待收货")
+            .fontSize(14)
+            .border({radius:20})
+            .padding({top:10,bottom:10,left:18,right:18})
+            .backgroundColor("#efefef")
+            .margin({right:15})
+          Text("待评价")
+            .fontSize(14)
+            .border({radius:20})
+            .padding({top:10,bottom:10,left:18,right:18})
+            .backgroundColor("#efefef")
+            .margin({right:10})
+        }
+        .width("100%")
+      }
+      .padding({top:20,bottom:10,left:20,right:20})
+      .width('100%')
+      .height('100%')
+      .backgroundColor(Color.White)
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     }
+
     .onReady((context: NavDestinationContext) => {
       this.pathStack = context.pathStack
     })
