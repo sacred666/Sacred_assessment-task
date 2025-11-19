@@ -1,6 +1,6 @@
 import { ReadPageComponent } from "@hms.core.readerservice.readerComponent"
 import { autoFillManager } from "@kit.AbilityKit"
-import { IconType } from "@kit.ArkUI"
+import { AppStorageV2, IconType } from "@kit.ArkUI"
 
 interface Swiper {
   icon: ResourceStr
@@ -20,6 +20,7 @@ interface HomePageClass {
 
 @ComponentV2
 export struct HomePage {
+  pathStack : NavPathStack = AppStorageV2.connect(NavPathStack,'navStack',()=>new NavPathStack())!
   // 明确指定数组类型
   HomePageData1: Array<HomePageClass> = [
     { text: '音乐节', icon: $r('app.media.musicparty') },
@@ -107,6 +108,11 @@ export struct HomePage {
               .backgroundColor(Color.Transparent)
               .margin({ right: 6 })
 
+
+              .onClick(()=>{
+                this.pathStack.pushPathByName('Searchs',null,false)
+
+              })
             Image($r("app.media.sacn"))
               .width(24)
               .height(24)
@@ -114,10 +120,14 @@ export struct HomePage {
 
             Button("搜索")
               .fontColor("#fff")
-              .backgroundColor('#FF6600')
+              .backgroundColor('#fc5446')
               .height(35)
               .padding({ left: 12, right: 12 })
               .borderRadius(6)
+              .onClick(()=>{
+                this.pathStack.pushPathByName('Searchs',null,false)
+
+              })
           }
           .border({
             color: '#000',
@@ -436,6 +446,7 @@ export struct HomePage {
     .width('100%')
     .height('100%')
     .backgroundColor(Color.White)
+    .scrollBar(BarState.Off)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 }
