@@ -1,0 +1,74 @@
+用户设置存储
+typescript
+// UserSettingsUtil.ets
+import { PreferencesUtil } from './PreferencesUtil';
+
+export class UserSettingsUtil {
+  private static readonly SETTINGS_KEY = 'user_settings';
+
+  // 保存用户主题设置
+  static async saveTheme(theme: string): Promise<void> {
+    const prefsUtil = PreferencesUtil.getInstance();
+    const settings = await prefsUtil.loadData(this.SETTINGS_KEY, {});
+    settings.theme = theme;
+    await prefsUtil.saveData(this.SETTINGS_KEY, settings);
+  }
+
+  // 获取用户主题设置
+  static async getTheme(): Promise<string> {
+    const prefsUtil = PreferencesUtil.getInstance();
+    const settings = await prefsUtil.loadData(this.SETTINGS_KEY, {});
+    return settings.theme || 'light';
+  }
+
+  // 保存语言设置
+  static async saveLanguage(language: string): Promise<void> {
+    const prefsUtil = PreferencesUtil.getInstance();
+    const settings = await prefsUtil.loadData(this.SETTINGS_KEY, {});
+    settings.language = language;
+    await prefsUtil.saveData(this.SETTINGS_KEY, settings);
+  }
+
+  // 获取语言设置
+  static async getLanguage(): Promise<string> {
+    const prefsUtil = PreferencesUtil.getInstance();
+    const settings = await prefsUtil.loadData(this.SETTINGS_KEY, {});
+    return settings.language || 'zh-CN';
+  }
+}
+
+
+
+
+
+
+
+应用入口初始化
+typescript
+// Entry.ets
+import { PreferencesUtil } from './util/PreferencesUtil';
+
+@Entry
+@Component
+struct MyApp {
+  @State isInitialized: boolean = false;
+
+  async aboutToAppear() {
+    try {
+      const context = getContext(this) as common.UIAbilityContext;
+      await PreferencesUtil.getInstance().initialize(context, 'my_app_data');
+      this.isInitialized = true;
+    } catch (error) {
+      console.error('Failed to initialize app:', error);
+    }
+  }
+
+  build() {
+    // 您的应用主界面
+    if (this.isInitialized) {
+      // 正常显示应用
+    } else {
+      // 显示加载中或错误界面
+    }
+  }
+}
