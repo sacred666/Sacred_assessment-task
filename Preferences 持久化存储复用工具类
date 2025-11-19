@@ -1,0 +1,135 @@
+1. Preferences 工具类
+// PreferencesUtil.ets
+import { preferences } from '@kit.ArkData';
+import { common } from "@kit.AbilityKit";
+
+/**
+ * Preferences 持久化存储工具类
+ * 提供简单易用的数据持久化方法
+ */
+export class PreferencesUtil {
+  private prefs: preferences.Preferences | null = null;
+  private static instance: PreferencesUtil | null = null;
+
+  /**
+   * 单例模式，获取工具类实例
+   */
+  public static getInstance(): PreferencesUtil {
+    if (!PreferencesUtil.instance) {
+      PreferencesUtil.instance = new PreferencesUtil();
+    }
+    return PreferencesUtil.instance;
+  }
+
+  /**
+   * 初始化 Preferences
+   * @param context 应用上下文
+   * @param name 存储文件名（可选，默认为 'app_data'）
+   */
+  async initialize(context: common.UIAbilityContext, name: string = 'app_data'): Promise<void> {
+    try {
+      this.prefs = await preferences.getPreferences(context, name);
+    } catch (error) {
+      console.error(`Failed to initialize Preferences: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 保存数据
+   * @param key 存储键
+   * @param value 存储值（会自动 JSON 序列化）
+   */
+  async saveData<T>(key: string, value: T): Promise<void> {
+    if (!this.prefs) {
+      throw new Error('Preferences not initialized. Call initialize() first.');
+    }
+
+    try {
+      const serializedValue = JSON.stringify(value);
+      await this.prefs.put(key, serializedValue);
+      await this.prefs.flush();
+    } catch (error) {
+      console.error(`Failed to save data for key ${key}: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 读取数据
+   * @param key 存储键
+   * @param defaultValue 默认值（当键不存在时返回）
+   */
+  async loadData<T>(key: string, defaultValue: T): Promise<T> {
+    if (!this.prefs) {
+      throw new Error('Preferences not initialized. Call initialize() first.');
+    }
+
+    try {
+      const storedValue: string = await this.prefs.get(key, '') as string;
+      
+      if (!storedValue) {
+        return defaultValue;
+      }
+
+      const parsedValue: T = JSON.parse(storedValue) as T;
+      return parsedValue;
+    } catch (error) {
+      console.error(`Failed to load data for key ${key}: ${error}`);
+      return defaultValue;
+    }
+  }
+
+  /**
+   * 删除指定键的数据
+   * @param key 要删除的键
+   */
+  async deleteData(key: string): Promise<void> {
+    if (!this.prefs) {
+      throw new Error('Preferences not initialized. Call initialize() first.');
+    }
+
+    try {
+      await this.prefs.delete(key);
+      await this.prefs.flush();
+    } catch (error) {
+      console.error(`Failed to delete data for key ${key}: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 清空所有数据
+   */
+  async clearAll(): Promise<void> {
+    if (!this.prefs) {
+      throw new Error('Preferences not initialized. Call initialize() first.');
+    }
+
+    try {
+      await this.prefs.clear();
+      await this.prefs.flush();
+    } catch (error) {
+      console.error(`Failed to clear all data: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 检查是否包含某个键
+   * @param key 要检查的键
+   */
+  async hasKey(key: string): Promise<boolean> {
+    if (!this.prefs) {
+      throw new Error('Preferences not initialized. Call initialize() first.');
+    }
+
+    try {
+      const value: string = await this.prefs.get(key, '') as string;
+      return value !== '';
+    } catch (error) {
+      console.error(`Failed to check key ${key}: ${error}`);
+      return false;
+    }
+  }
+}
