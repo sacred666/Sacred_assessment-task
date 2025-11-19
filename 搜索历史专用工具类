@@ -1,0 +1,72 @@
+// SearchHistoryUtil.ets
+import { PreferencesUtil } from './PreferencesUtil';
+
+/**
+ * 搜索历史管理工具类
+ * 基于 PreferencesUtil 封装的搜索历史专用方法
+ */
+export class SearchHistoryUtil {
+  private static readonly SEARCH_HISTORY_KEY = 'search_history';
+  private static readonly MAX_HISTORY_COUNT = 20;
+
+  /**
+   * 添加搜索记录
+   * @param keyword 搜索关键词
+   */
+  static async addSearchHistory(keyword: string): Promise<void> {
+    if (!keyword.trim()) {
+      return;
+    }
+
+    const prefsUtil = PreferencesUtil.getInstance();
+    let history: string[] = await prefsUtil.loadData(this.SEARCH_HISTORY_KEY, []);
+
+    // 移除重复项
+    const index = history.indexOf(keyword);
+    if (index !== -1) {
+      history.splice(index, 1);
+    }
+
+    // 添加到开头
+    history.unshift(keyword);
+
+    // 限制数量
+    if (history.length > this.MAX_HISTORY_COUNT) {
+      history = history.slice(0, this.MAX_HISTORY_COUNT);
+    }
+
+    // 保存
+    await prefsUtil.saveData(this.SEARCH_HISTORY_KEY, history);
+  }
+
+  /**
+   * 获取搜索历史
+   */
+  static async getSearchHistory(): Promise<string[]> {
+    const prefsUtil = PreferencesUtil.getInstance();
+    return await prefsUtil.loadData(this.SEARCH_HISTORY_KEY, []);
+  }
+
+  /**
+   * 清空搜索历史
+   */
+  static async clearSearchHistory(): Promise<void> {
+    const prefsUtil = PreferencesUtil.getInstance();
+    await prefsUtil.saveData(this.SEARCH_HISTORY_KEY, []);
+  }
+
+  /**
+   * 删除单条搜索记录
+   * @param keyword 要删除的关键词
+   */
+  static async deleteSearchItem(keyword: string): Promise<void> {
+    const prefsUtil = PreferencesUtil.getInstance();
+    let history: string[] = await prefsUtil.loadData(this.SEARCH_HISTORY_KEY, []);
+    
+    const index = history.indexOf(keyword);
+    if (index !== -1) {
+      history.splice(index, 1);
+      await prefsUtil.saveData(this.SEARCH_HISTORY_KEY, history);
+    }
+  }
+}
