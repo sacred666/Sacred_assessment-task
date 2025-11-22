@@ -133,7 +133,7 @@ Column(){
       width: 2,
       radius: 8
     })
-    .padding({ left: 6, right: 6 })
+    .padding({ left: 6, right:2 })
     .height(40)
     .layoutWeight(1)
     .backgroundColor(Color.White)
