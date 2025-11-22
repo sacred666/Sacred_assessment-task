@@ -11,6 +11,7 @@ interface Show {
   introduction: string
   photo: ResourceStr
   price: number
+  install?: boolean; // 加 ? 表示可选，可传可不传
 }
 
 interface HomePageClass {
@@ -88,62 +89,67 @@ export struct HomePage {
 
   build() {
     Scroll() {
+Column(){
+  // 顶部搜索栏
+  Row() {
+    Image($r("app.media.ai"))
+      .width(28)
+      .height(28)
+      .margin({ right: 8 })
+      .fillColor("#f55300")
+    Row() {
+      Text("北京")
+        .fontColor("#000")
+        .margin({ right: 6 })
+
+      TextInput({ placeholder: '张杰' })
+        .placeholderColor('#817D83')
+        .fontColor('#333')
+        .layoutWeight(1)
+        .backgroundColor(Color.Transparent)
+        .margin({ right: 6 })
+        .onClick(()=>{
+          this.pathStack.pushPathByName('Searchs',null,false)
+
+        })
+      Image($r("app.media.sacn"))
+        .width(24)
+        .height(24)
+        .margin({ right: 10 })
+
+      Button("搜索")
+        .fontColor("#fff")
+        .fontSize(14)
+        .backgroundColor('#fa5a33')
+        .height(35)
+        .padding({ left: 12, right: 12 })
+        .borderRadius(6)
+        .onClick(()=>{
+          this.pathStack.pushPathByName('Searchs',null,false)
+        })
+    }
+    .border({
+      color: '#000',
+      width: 2,
+      radius: 8
+    })
+    .padding({ left: 6, right: 6 })
+    .height(40)
+    .layoutWeight(1)
+    .backgroundColor(Color.White)
+  }
+  .linearGradient({
+    direction:GradientDirection.Right,
+    colors: [
+      ['#fee4c7', 0.0],
+      ['#f9d2eb', 1.0]
+    ]
+  })
+  .width('100%')
+.margin({bottom:10})
+  .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+
       Column() {
-        // 顶部搜索栏
-        Row() {
-          Image($r("app.media.ai"))
-            .width(28)
-            .height(28)
-            .margin({ right: 8 })
-
-          Row() {
-            Text("北京")
-              .fontColor("#000")
-              .margin({ right: 6 })
-
-            TextInput({ placeholder: '张杰' })
-              .placeholderColor('#817D83')
-              .fontColor('#333')
-              .layoutWeight(1)
-              .backgroundColor(Color.Transparent)
-              .margin({ right: 6 })
-
-
-              .onClick(()=>{
-                this.pathStack.pushPathByName('Searchs',null,false)
-
-              })
-            Image($r("app.media.sacn"))
-              .width(24)
-              .height(24)
-              .margin({ right: 10 })
-
-            Button("搜索")
-              .fontColor("#fff")
-              .backgroundColor('#fc5446')
-              .height(35)
-              .padding({ left: 12, right: 12 })
-              .borderRadius(6)
-              .onClick(()=>{
-                this.pathStack.pushPathByName('Searchs',null,false)
-
-              })
-          }
-          .border({
-            color: '#000',
-            width: 2,
-            radius: 8
-          })
-          .padding({ left: 6, right: 6 })
-          .height(40)
-          .layoutWeight(1)
-          .backgroundColor(Color.White)
-        }
-        .width('100%')
-        .height(60)
-        .backgroundColor(Color.White)
-        .padding({ left: 10, right: 10 })
-
         //图标区域1
         Row() {
           ForEach(this.HomePageData1, (item: HomePageClass, index: number) => {
@@ -229,6 +235,7 @@ export struct HomePage {
                 .width(16)
                 .height(16)
                 .fillColor(Color.White)
+                .padding(3)
                 .backgroundColor(Color.Black)
                 .border({ radius: 5 })
             }
@@ -293,6 +300,7 @@ export struct HomePage {
                 .fontColor(Color.Orange)
                 .layoutWeight(1)
               Image($r('app.media.right'))
+                .padding(3)
                 .width(16)
                 .height(16)
                 .fillColor(Color.White)
@@ -320,7 +328,7 @@ export struct HomePage {
                 Row() {
                   Text("去领取")
                     .fontSize(12)
-                    .fontColor(Color.Orange)
+                    .fontColor('#f05615')
                     .fontWeight(FontWeight.Bold)
                     .padding({
                       top: 3,
@@ -443,10 +451,12 @@ export struct HomePage {
       .alignItems(HorizontalAlign.Start)
       .padding({ right: 10, left: 10 })
     }
+
+  }
     .width('100%')
     .height('100%')
-    .backgroundColor(Color.White)
-    .scrollBar(BarState.Off)
+    .backgroundColor(Color.Transparent)
+    .scrollBar(BarState.Off)  // 隐藏滚动条
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-  }
+}
 }
