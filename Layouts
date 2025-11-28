@@ -22,7 +22,7 @@ struct Layouts {
     {text: '首页', icon: $r('app.media.home')},
     {text: '影院·场馆', icon: $r('app.media.movie')},
     {text: '大麦VIP', icon: $r('app.media.vip')},
-    {text: '发现', icon: $r('app.media.find')},
+    {text: '发现', icon: $r('app.media.refind')},
     {text: '我的', icon: $r('app.media.mine')}
   ]
   @Builder tabbuilder(item:TabClass,index:number){
