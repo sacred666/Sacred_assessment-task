@@ -21,6 +21,7 @@ interface HomePageClass {
 
 @ComponentV2
 export struct HomePage {
+
   pathStack : NavPathStack = AppStorageV2.connect(NavPathStack,'navStack',()=>new NavPathStack())!
   // 明确指定数组类型
   HomePageData1: Array<HomePageClass> = [
@@ -75,16 +76,16 @@ export struct HomePage {
     {
       title: '演唱会',
       introduction: "声声不息演唱会",
-      photo: $r('app.media.ad4'),
+      photo: $r('app.media.SSBX'),
       price: 99
     },
   ]
 
   swiperList: Array<Swiper> = [
-    { icon: $r("app.media.ad1") },
-    { icon: $r("app.media.ad2") },
-    { icon: $r("app.media.ad3") },
-    { icon: $r("app.media.ad4") }
+    { icon: $r("app.media.Sw1") },
+    { icon: $r("app.media.Sw2") },
+    { icon: $r("app.media.Sw3") },
+    { icon: $r("app.media.Sw4") }
   ]
 
   build() {
@@ -368,9 +369,10 @@ Column(){
           })
         }
         .width("100%")
-        .height(160)
         .autoPlay(true)
+        .height(50)
         .margin({ bottom: 20 })
+.height(200)
         //必看演出
         Row() {
           Text("必看演出")
@@ -392,6 +394,7 @@ Column(){
                 Stack() {
                   Image(item.photo)
                     .width("100%")
+                    .height(100)
                     .border({ radius: 10 })
                   Text(item.title)
                     .padding({
