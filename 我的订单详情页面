@@ -1,4 +1,4 @@
-import { AppStorageV2 } from "@kit.ArkUI";
+import { AppStorageV2, router } from "@kit.ArkUI";
 import { it } from "@ohos/hypium";
 import { text } from "@kit.ArkGraphics2D";
 
@@ -50,7 +50,7 @@ pathStack : NavPathStack = new NavPathStack();
 Row(){
   Image($r("app.media.back"))
     .width(30)
-    .margin({right:120})
+    .margin({right:110})
     .onClick(()=>{this.pathStack.pop()})
   Text("我的订单")
     .fontSize(22)
@@ -108,6 +108,76 @@ Row(){
             .margin({right:10})
         }
         .width("100%")
+        Row() {
+          // 左侧图片
+          Image($r("app.media.light"))
+            .width(90)
+            .height(150)
+            .borderRadius(10)
+            .margin({ right: 10 })
+
+          // 中间文字信息
+          Column() {
+            Text("2025张韶涵觅光巡回演唱会-泉州站")
+              .fontSize(18)
+              .margin({ bottom: 20 })
+              .width('100%')
+              .textAlign(TextAlign.Start)
+
+            Text("2025.12.12 19:00")
+              .fontSize(14)
+              .fontColor('#666666')
+              .margin({ bottom: 20 })
+              .width('100%')
+              .textAlign(TextAlign.Start)
+
+            Text("泉州 | 泉州海峡体育中心体育场")
+              .fontSize(14)
+              .fontColor('#666666')
+              .width('100%')
+              .textAlign(TextAlign.Start)
+          }
+          .alignItems(HorizontalAlign.Start)
+          .justifyContent(FlexAlign.Start) // 改为顶部对齐
+          .layoutWeight(1)
+
+          // 右侧状态 - 添加顶部对齐
+          Column() {
+            Text("待付款")
+              .fontSize(13)
+              .fontColor('#FF1493')
+              .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+              .borderRadius(4)
+          }
+          .alignSelf(ItemAlign.Start) // 关键：在Row中顶部对齐
+          .margin({ top: 0 }) // 确保没有额外的顶部边距
+        }
+        .width('100%')
+        .padding(16)
+        .backgroundColor(Color.White)
+        .borderRadius(10)
+        .margin({ left: 20, right: 20, top: 20 })
+        .alignItems(VerticalAlign.Top) // 设置整个Row为顶部对齐
+        .onClick(()=>{
+          this.pathStack.pushPathByName('Order', null, false)
+        })
+        Row(){
+          // 空白填充，将金额推到右边
+          Blank()
+            .layoutWeight(1)
+
+          Text("共1张")
+            .fontSize(15)
+            .fontColor('#666666')
+            .margin({ right: 5 })
+
+          Text("￥1088.00")
+            .fontSize(18)
+            .fontColor('#000000')
+            .fontWeight(FontWeight.Bold)
+            .padding({right:20})
+        }
+
       }
       .padding({top:20,bottom:10,left:20,right:20})
       .width('100%')
