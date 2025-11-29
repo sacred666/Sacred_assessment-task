@@ -1,0 +1,58 @@
+import { AppStorageV2 } from '@kit.ArkUI'
+@Builder
+export function OrderBuilder() {
+  Order()
+}
+@ComponentV2
+
+struct Order {
+  pathStack: NavPathStack = AppStorageV2.connect(NavPathStack, 'navStack', () => new NavPathStack())!
+
+  build() {
+    NavDestination() {
+      Column() {
+        // 返回按钮和标题
+        Row() {
+          Image($r("app.media.back"))
+            .width(30)
+            .margin({right:110})
+            .onClick(() => {
+              this.pathStack.pop()
+            })
+          Text("订单详情")
+            .fontSize(22)
+            .layoutWeight(1)
+        }
+        .margin({bottom:20})
+        .width("100%")
+
+        // 订单内容
+        Column() {
+          Image($r("app.media.light"))
+            .width("100%")
+
+
+          Text("订单详情页面")
+            .fontSize(18)
+            .margin({ top: 20 })
+
+          Text("这里显示订单的详细信息")
+            .fontSize(14)
+            .fontColor('#666666')
+            .margin({ top: 10 })
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Center)
+        .justifyContent(FlexAlign.Center)
+      }
+      .padding({top:20,bottom:10,left:20,right:20})
+      .width('100%')
+      .height('100%')
+      .backgroundColor(Color.White)
+    }
+    .onReady((context: NavDestinationContext) => {
+      this.pathStack = context.pathStack
+    })
+    .hideTitleBar(true)
+  }
+}
