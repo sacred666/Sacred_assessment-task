@@ -1,0 +1,101 @@
+// utils/LoginManager.ets
+import preferences from '@ohos.data.preferences';
+import common from '@ohos.app.ability.common';
+
+// 定义用户信息类
+export class UserInfo {
+  username: string = '';
+  loginTime: string = '';
+
+  constructor(username: string = '', loginTime: string = '') {
+    this.username = username;
+    this.loginTime = loginTime;
+  }
+}
+
+// 定义用于解析 JSON 数据的接口
+interface UserData {
+  username?: string;
+  loginTime?: string;
+}
+
+export class LoginManager {
+  private static readonly PREFERENCES_KEY: string = 'user_login_status';
+  private static readonly USER_INFO_KEY: string = 'user_info';
+
+  /**
+   * 保存登录状态
+   * @param context UIAbility上下文
+   * @param isLoggedIn 是否已登录
+   */
+  static async saveLoginStatus(context: common.UIAbilityContext, isLoggedIn: boolean): Promise<void> {
+    try {
+      const pref: preferences.Preferences = await preferences.getPreferences(context, 'user_data');
+      await pref.put(LoginManager.PREFERENCES_KEY, isLoggedIn);
+      await pref.flush();
+      console.log('登录状态已保存:', isLoggedIn);
+    } catch (error) {
+      console.error('保存登录状态失败:', error);
+    }
+  }
+
+  /**
+   * 加载登录状态
+   * @param context UIAbility上下文
+   * @returns 登录状态
+   */
+  static async loadLoginStatus(context: common.UIAbilityContext): Promise<boolean> {
+    try {
+      const pref: preferences.Preferences = await preferences.getPreferences(context, 'user_data');
+      const isLoggedIn: preferences.ValueType = await pref.get(LoginManager.PREFERENCES_KEY, false);
+      console.log('加载登录状态:', isLoggedIn);
+      return isLoggedIn as boolean;
+    } catch (error) {
+      console.error('加载登录状态失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 保存用户信息
+   * @param context UIAbilityContext
+   * @param userInfo 用户信息
+   */
+  static async saveUserInfo(context: common.UIAbilityContext, userInfo: UserInfo): Promise<void> {
+    try {
+      const pref: preferences.Preferences = await preferences.getPreferences(context, 'user_data');
+      await pref.put(LoginManager.USER_INFO_KEY, JSON.stringify(userInfo));
+      await pref.flush();
+      console.log('用户信息已保存');
+    } catch (error) {
+      console.error('保存用户信息失败:', error);
+    }
+  }
+
+  /**
+   * 加载用户信息
+   * @param context UIAbility上下文
+   * @returns 用户信息
+   */
+  static async loadUserInfo(context: common.UIAbilityContext): Promise<UserInfo | null> {
+    try {
+      const pref: preferences.Preferences = await preferences.getPreferences(context, 'user_data');
+      const userInfoStr: preferences.ValueType = await pref.get(LoginManager.USER_INFO_KEY, '{}');
+
+      // 解析JSON数据，使用明确的UserData类型
+      const data: UserData = JSON.parse(userInfoStr as string) as UserData;
+
+      // 检查返回的数据结构
+      if (data) {
+        return new UserInfo(
+          data.username !== undefined ? data.username : '',
+          data.loginTime !== undefined ? data.loginTime : ''
+        );
+      }
+      return new UserInfo();
+    } catch (error) {
+      console.error('加载用户信息失败:', error);
+      return null;
+    }
+  }
+}
