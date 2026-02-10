@@ -1,0 +1,83 @@
+// utils/LoginStateManager.ets
+import { AppStorageV2 } from '@kit.ArkUI';
+import { LoginManager, UserInfo } from './LoginManager';
+import common from '@ohos.app.ability.common';
+
+// 定义LoginStateManager类
+export class LoginStateManager {
+  private static readonly LOGIN_KEY: string = 'isLoggedIn';
+  private static context: common.UIAbilityContext | null = null;
+
+  // 设置UIAbility上下文
+  static setContext(context: common.UIAbilityContext): void {
+    LoginStateManager.context = context;
+  }
+
+  // 检查用户是否已登录
+  static isLoggedIn(): boolean {
+    const isLoggedIn: boolean | undefined = AppStorage.get<boolean>(LoginStateManager.LOGIN_KEY);
+    return isLoggedIn === true;
+  }
+
+  // 用户登录
+  static async login(): Promise<void> {
+    if (!LoginStateManager.context) {
+      console.error('未设置UIAbility上下文');
+      return;
+    }
+
+    // 更新AppStorage
+    AppStorage.setOrCreate<boolean>(LoginStateManager.LOGIN_KEY, true);
+
+    // 保存用户信息到Preferences
+    const userInfo: UserInfo = new UserInfo('麦子cqdu1', new Date().toISOString());
+    await LoginManager.saveUserInfo(LoginStateManager.context, userInfo);
+
+    // 保存登录状态到Preferences
+    await LoginManager.saveLoginStatus(LoginStateManager.context, true);
+    console.log('用户登录成功');
+  }
+
+  // 用户退出登录
+  static async logout(): Promise<void> {
+    if (!LoginStateManager.context) {
+      console.error('未设置UIAbility上下文');
+      return;
+    }
+
+    // 更新AppStorage
+    AppStorage.setOrCreate<boolean>(LoginStateManager.LOGIN_KEY, false);
+
+    // 保存登录状态到Preferences
+    await LoginManager.saveLoginStatus(LoginStateManager.context, false);
+    console.log('用户退出登录');
+  }
+
+  // 初始化登录状态
+  static async initLoginStatus(): Promise<void> {
+    if (!LoginStateManager.context) {
+      console.error('未设置UIAbility上下文');
+      AppStorage.setOrCreate<boolean>(LoginStateManager.LOGIN_KEY, false);
+      return;
+    }
+
+    try {
+      const isLoggedIn: boolean = await LoginManager.loadLoginStatus(LoginStateManager.context);
+      AppStorage.setOrCreate<boolean>(LoginStateManager.LOGIN_KEY, isLoggedIn);
+      console.log('登录状态初始化:', isLoggedIn);
+    } catch (error) {
+      console.error('初始化登录状态失败:', error);
+      AppStorage.setOrCreate<boolean>(LoginStateManager.LOGIN_KEY, false);
+    }
+  }
+
+  // 获取当前用户信息
+  static async getUserInfo(): Promise<UserInfo | null> {
+    if (!LoginStateManager.context) {
+      console.error('未设置UIAbility上下文');
+      return null;
+    }
+    const userInfo: UserInfo | null = await LoginManager.loadUserInfo(LoginStateManager.context);
+    return userInfo;
+  }
+}
