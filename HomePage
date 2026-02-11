@@ -385,10 +385,11 @@ Column(){
             .width(12)
         }
         .width("100%")
-        .padding({ right: 15 })
+        .padding({ right:15})
+        .margin({bottom:10})
 
         List() {
-          ForEach(this.showdata, (item: Show) => {
+          ForEach(this.showdata, (item: Show,index:number) => {
             ListItem() {
               Column() {
                 Stack() {
@@ -414,7 +415,11 @@ Column(){
                 }
                 .alignContent(Alignment.TopStart)
                 .margin({ bottom: 4 })
-
+                .onClick(() => {
+                  if (index === 4) {
+                    this.pathStack.pushPathByName('detail', null, false)
+                  }
+                })
                 Text(item.introduction)
                   .width("100%")
                   .maxLines(2)
