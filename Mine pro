@@ -15,7 +15,7 @@ interface SwiperItem {
 export struct Mine {
   @State private currentindex: number = 0;
   @StorageLink('isLoggedIn') private isLoggedIn: boolean = false;
-  private pathStack: NavPathStack = new NavPathStack();
+  pathStack : NavPathStack = AppStorageV2.connect(NavPathStack,'navStack',()=>new NavPathStack())!
 
   private Data: MineClass[] = [
     { text: '我的订单', icon: $r('app.media.my') },
