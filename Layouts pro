@@ -1,28 +1,28 @@
-// pages/Layouts.ets
-import { TabBarPosition, AppStorageV2 } from "@kit.ArkUI";
+import { AppStorageV2 } from "@kit.ArkUI";
+import { LoginStateManager } from "../utils/LoginStateManager";
+import { Mine1 } from "./Mine1";
+import { Mine } from "./Mine";
+// 引入其他页面 (Find, HomePage, Movie, Vip 保持你原有的引用)
 import { Find } from "./Find";
 import { HomePage } from "./HomePage";
 import { Movie } from "./Movie";
 import { Vip } from "./Vip";
-import { LoginStateManager } from "../utils/LoginStateManager";
-import { Mine1 } from "./Mine1";
-import { Mine } from "./Mine";
 
-interface TabClass {
-  text: string;
-  icon: ResourceStr;
-}
+interface TabClass { text: string; icon: ResourceStr; }
 
+// 【必须导出这个 Builder】，名字要和 route_map.json 里的一致
 @Builder
 export function LayoutsBuilder() {
   Layouts();
 }
 
 @Component
-struct Layouts {
+export struct Layouts {
   @State currentindex: number = 0;
   @StorageLink('isLoggedIn') isLoggedIn: boolean = false;
-  private pathStack: NavPathStack = new NavPathStack();
+
+  // 连接全局栈 (虽然 Layouts 自己不跳，但保持连接是个好习惯)
+  pathStack: NavPathStack = AppStorageV2.connect(NavPathStack, 'navStack')!;
 
   private tabData: TabClass[] = [
     {text: '首页', icon: $r('app.media.home')},
@@ -38,7 +38,6 @@ struct Layouts {
       Image(item.icon)
         .width(24)
         .fillColor(this.currentindex == index ? "#FF7F24" : "#000000");
-
       Text(item.text)
         .fontSize(14)
         .fontColor(this.currentindex == index ? "#FF7F24" : "#000000");
@@ -46,27 +45,21 @@ struct Layouts {
   }
 
   aboutToAppear(): void {
-    // 初始化AppStorage键
-    AppStorage.setOrCreate<boolean>('isLoggedIn', false);
-    // 从Preferences初始化登录状态
     LoginStateManager.initLoginStatus();
   }
 
   build() {
+    // 【必须包裹 NavDestination】，因为它是从 Ad 页面 replace 过来的
     NavDestination() {
       Tabs({barPosition: BarPosition.End}) {
         ForEach(this.tabData, (item: TabClass, index: number) => {
           TabContent() {
-            if (index === 0) {
-              HomePage();
-            } else if (index === 1) {
-              Movie();
-            } else if (index === 2) {
-              Vip();
-            } else if (index === 3) {
-              Find();
-            } else if (index === 4) {
-              // 根据登录状态显示不同的"我的"页面
+            if (index === 0) HomePage();
+            else if (index === 1) Movie();
+            else if (index === 2) Vip();
+            else if (index === 3) Find();
+            else if (index === 4) {
+              // 登录状态切换
               if (this.isLoggedIn) {
                 Mine();
               } else {
@@ -83,14 +76,8 @@ struct Layouts {
       .backgroundColor("#fff")
       .onChange((index: number) => {
         this.currentindex = index;
-        // 每次切换到"我的"标签时，重新检查登录状态
-        if (index === 4) {
-          this.isLoggedIn = LoginStateManager.isLoggedIn();
-        }
       });
     }
-    .onReady((context: NavDestinationContext) => {
-      this.pathStack = context.pathStack;
-    });
+    .hideTitleBar(true) // 隐藏系统标题栏
   }
 }
