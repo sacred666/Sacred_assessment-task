@@ -15,7 +15,14 @@ interface SwiperItem {
 export struct Mine {
   @State private currentindex: number = 0;
   @StorageLink('isLoggedIn') private isLoggedIn: boolean = false;
-  pathStack : NavPathStack = AppStorageV2.connect(NavPathStack,'navStack',()=>new NavPathStack())!
+
+  // 1. 获取全局栈
+  pathStack : NavPathStack = AppStorageV2.connect(NavPathStack,'navStack')!;
+
+  // 2. 【新增】绑定用户信息，与 EditInfo 页面同步
+  // 如果没设置过，给个默认值 '麦子cqdu1' 和默认头像
+  @StorageLink('user_nickname') nickname: string = '麦子cqdu1';
+  @StorageLink('user_avatar') avatar: ResourceStr = $r("app.media.id");
 
   private Data: MineClass[] = [
     { text: '我的订单', icon: $r('app.media.my') },
@@ -80,314 +87,157 @@ export struct Mine {
         .width("100%")
         .padding({right:10,top:10});
 
-        // 头像区域
+        // --- 头像区域 (已修改：绑定数据 + 点击跳转) ---
         Row() {
-          Image($r("app.media.id"))
+          // 绑定动态头像
+          Image(this.avatar)
             .width(80)
             .height(80)
             .margin({ right: 15 })
             .border({ radius: 50 })
             .border({ style: BorderStyle.Solid })
             .borderColor(Color.White);
+
           Column() {
-            Text("麦子cqdu1")
+            // 绑定动态昵称
+            Text(this.nickname)
               .fontColor(Color.Black)
               .fontSize(25)
               .height(40)
               .margin({ bottom: 6, top: 10 });
 
             Row() {
-              Text("0")
-                .fontSize(20)
-                .margin({ right: 6 })
-                .fontWeight(FontWeight.Bold);
-              Text("关注")
-                .fontColor(Color.Gray)
-                .fontSize(16)
-                .margin({ right: 11 });
-              Text("|")
-                .fontSize(12)
-                .margin({ right: 11 })
-                .fontWeight(FontWeight.Lighter);
-              Text("0")
-                .fontSize(20)
-                .margin({ right: 6 })
-                .fontWeight(FontWeight.Bold);
-              Text("粉丝")
-                .fontColor(Color.Gray)
-                .fontSize(16)
-                .margin({ right: 11 });
-              Text("|")
-                .fontSize(12)
-                .margin({ right: 11 })
-                .fontWeight(FontWeight.Lighter);
-              Text("0")
-                .fontSize(20)
-                .margin({ right: 6 })
-                .fontWeight(FontWeight.Bold);
-              Text("获赞与想看")
-                .fontColor(Color.Gray)
-                .fontSize(16)
-                .margin({ right: 11 });
+              Text("0").fontSize(20).margin({ right: 6 }).fontWeight(FontWeight.Bold);
+              Text("关注").fontColor(Color.Gray).fontSize(16).margin({ right: 11 });
+              Text("|").fontSize(12).margin({ right: 11 }).fontWeight(FontWeight.Lighter);
+              Text("0").fontSize(20).margin({ right: 6 }).fontWeight(FontWeight.Bold);
+              Text("粉丝").fontColor(Color.Gray).fontSize(16).margin({ right: 11 });
+              Text("|").fontSize(12).margin({ right: 11 }).fontWeight(FontWeight.Lighter);
+              Text("0").fontSize(20).margin({ right: 6 }).fontWeight(FontWeight.Bold);
+              Text("获赞与想看").fontColor(Color.Gray).fontSize(16).margin({ right: 11 });
             }
           }
           .alignItems(HorizontalAlign.Start)
           .height(100);
+
+          // 添加一个箭头提示可以点击
+          Blank()
+          Text(" > ").fontSize(20).fontColor(Color.Gray).margin({right:10})
         }
         .width("100%")
         .backgroundColor("#fbf2e9")
-        .padding({left:10});
+        .padding({left:10})
+        .onClick(() => {
+          // 【核心跳转】点击整个头像区域，跳转到编辑资料页
+          this.pathStack.pushPathByName("EditInfo", null);
+        })
 
-        // ... 以下是原有内容，保持不变 ...
+        // ... 以下内容原封不动保留 ...
         Column() {
           // 升级VIP区域
           Column() {
             Row() {
-              Text("升级")
-                .fontSize(20)
-                .fontColor("#663300");
-              Text("大麦VIP")
-                .fontSize(20)
-                .fontWeight(FontWeight.Bold)
-                .fontColor("#663300");
-              Text("可享权益")
-                .fontSize(17)
-                .layoutWeight(1)
-                .fontColor("#663300");
-              Text("全部权益")
-                .fontSize(13)
-                .fontColor("#663300");
-              Image($r("app.media.more"))
-                .width(13);
+              Text("升级").fontSize(20).fontColor("#663300");
+              Text("大麦VIP").fontSize(20).fontWeight(FontWeight.Bold).fontColor("#663300");
+              Text("可享权益").fontSize(17).layoutWeight(1).fontColor("#663300");
+              Text("全部权益").fontSize(13).fontColor("#663300");
+              Image($r("app.media.more")).width(13);
             }
             .width("100%")
             .margin({ bottom: 6 });
 
             Row() {
               Column() {
-                Text("黑钻")
-                  .fontSize(16)
-                  .fontColor("#e4d0c0")
-                  .padding({ left: 10, right: 10, top: 10 });
-                Text("包厢")
-                  .fontSize(16)
-                  .fontColor("#e4d0c0")
-                  .padding({ left: 10, right: 10, bottom: 10 });
+                Text("黑钻").fontSize(16).fontColor("#e4d0c0").padding({ left: 10, right: 10, top: 10 });
+                Text("包厢").fontSize(16).fontColor("#e4d0c0").padding({ left: 10, right: 10, bottom: 10 });
               }
-              .margin({ right: 8 })
-              .backgroundColor('#2E2E2E')
-              .borderRadius(16);
-              Text("黑钻专享·【上海】浦发银行东方体育中心演唱会")
-                .fontSize(15)
-                .maxLines(2)
-                .fontColor("#663300")
-                .layoutWeight(1);
-              Text("去看看")
-                .border({ radius: 12 })
-                .backgroundColor("#feead1")
-                .fontSize(13)
-                .padding({
-                  top: 6,
-                  bottom: 6,
-                  left: 10,
-                  right: 10
-                });
+              .margin({ right: 8 }).backgroundColor('#2E2E2E').borderRadius(16);
+              Text("黑钻专享·【上海】浦发银行东方体育中心演唱会").fontSize(15).maxLines(2).fontColor("#663300").layoutWeight(1);
+              Text("去看看").border({ radius: 12 }).backgroundColor("#feead1").fontSize(13).padding({ top: 6, bottom: 6, left: 10, right: 10 });
             }
             .width("100%");
           }
-          .padding({
-            left: 10,
-            right: 10,
-            top:10,
-            bottom: 10
-          })
-          .width("100%")
-          .linearGradient({
-            direction: GradientDirection.Right,
-            colors: [
-              ['#fde4ca', 0.0],
-              ["#fdc19e", 0.3],
-              ['#f4a87f', 1.0]
-            ]
-          })
+          .padding({ left: 10, right: 10, top:10, bottom: 10 }).width("100%")
+          .linearGradient({ direction: GradientDirection.Right, colors: [['#fde4ca', 0.0], ["#fdc19e", 0.3], ['#f4a87f', 1.0]] })
           .border({ radius: 12 });
 
-          // 四个图标区域
+          // 四个图标区域 (保留 Next 跳转逻辑)
           Row() {
             ForEach(this.Data, (item: MineClass, index: number) => {
               Column() {
                 Image(item.icon)
                   .onClick(() => {
+                    // 保留原有的跳转逻辑
                     if (index === 0) {
                       this.pathStack.pushPathByName('Next', null, false);
                     }
                   })
-                  .width(40)
-                  .fillColor("#d0accb")
-                  .margin({ bottom: 10 })
-                  .padding({ top: 20 });
-                Text(item.text)
-                  .fontSize(12)
-                  .textAlign(TextAlign.Center)
-                  .width('auto')
-                  .padding({ bottom: 10 });
+                  .width(40).fillColor("#d0accb").margin({ bottom: 10 }).padding({ top: 20 });
+                Text(item.text).fontSize(12).textAlign(TextAlign.Center).width('auto').padding({ bottom: 10 });
               }
-              .width(60)
-              .margin({ right: 10 });
+              .width(60).margin({ right: 10 });
             });
           }
-          .padding({ left: 10 })
-          .justifyContent(FlexAlign.SpaceEvenly)
-          .width("100%")
-          .backgroundColor("#fefefe")
-          .margin({ bottom: 10 })
-          .border({ radius: 12 });
+          .padding({ left: 10 }).justifyContent(FlexAlign.SpaceEvenly).width("100%").backgroundColor("#fefefe").margin({ bottom: 10 }).border({ radius: 12 });
 
           // 想看区域
           Row() {
             Row() {
-              Text("想看")
-                .fontSize(14)
-                .padding({ left: 10, top: 20, bottom: 20 })
-                .layoutWeight(1);
-              Image($r("app.media.more"))
-                .width(14);
-            }
-            .width("45%")
-            .margin({ right: 10 });
+              Text("想看").fontSize(14).padding({ left: 10, top: 20, bottom: 20 }).layoutWeight(1);
+              Image($r("app.media.more")).width(14);
+            }.width("45%").margin({ right: 10 });
 
-            Text("|")
-              .fontColor(Color.Gray);
+            Text("|").fontColor(Color.Gray);
             Row() {
-              Text("抢票预约")
-                .fontSize(14)
-                .padding({ left: 10, top: 20, bottom: 20 })
-                .layoutWeight(1);
-              Image($r("app.media.more"))
-                .width(14);
-            }
-            .margin({ left: 2 })
-            .width("45%");
+              Text("抢票预约").fontSize(14).padding({ left: 10, top: 20, bottom: 20 }).layoutWeight(1);
+              Image($r("app.media.more")).width(14);
+            }.margin({ left: 2 }).width("45%");
           }
-          .width("100%")
-          .backgroundColor("#fefefe")
-          .border({ radius: 10 })
-          .margin({ bottom: 10 });
+          .width("100%").backgroundColor("#fefefe").border({ radius: 10 }).margin({ bottom: 10 });
 
           // 在线客服区域
           Column() {
             Row() {
               ForEach(this.Data1, (item: MineClass, index: number) => {
                 Column() {
-                  Image(item.icon)
-                    .width(30)
-                    .fillColor("#353535")
-                    .margin({ bottom: 10 })
-                    .padding({ top: 20 });
-                  Text(item.text)
-                    .fontSize(12)
-                    .fontWeight(FontWeight.Bold)
-                    .textAlign(TextAlign.Center)
-                    .width('auto')
-                    .padding({ bottom: 10 });
-                }
-                .width(60)
-                .margin({ right: 10 });
+                  Image(item.icon).width(30).fillColor("#353535").margin({ bottom: 10 }).padding({ top: 20 });
+                  Text(item.text).fontSize(12).fontWeight(FontWeight.Bold).textAlign(TextAlign.Center).width('auto').padding({ bottom: 10 });
+                }.width(60).margin({ right: 10 });
               });
-            }
-            .padding({ left: 10 })
-            .justifyContent(FlexAlign.SpaceEvenly)
-            .width("100%")
-            .margin({ bottom: 5 });
+            }.padding({ left: 10 }).justifyContent(FlexAlign.SpaceEvenly).width("100%").margin({ bottom: 5 });
 
             Row() {
-              Row() {
-              }
-              .width("50%")
-              .height("50%")
-              .backgroundColor("#e83b73");
-
-              Row() {
-              }
-              .backgroundColor("#faebf0")
-              .width("50%")
-              .height("50%");
-            }
-            .height(5)
-            .width(25)
-            .border({ radius: 30 })
-            .borderColor(Color.White)
-            .backgroundColor("#f7286e")
-            .justifyContent(FlexAlign.Center);
+              Row().width("50%").height("50%").backgroundColor("#e83b73");
+              Row().backgroundColor("#faebf0").width("50%").height("50%");
+            }.height(5).width(25).border({ radius: 30 }).borderColor(Color.White).backgroundColor("#f7286e").justifyContent(FlexAlign.Center);
           }
-          .padding({ bottom: 10 })
-          .width("100%")
-          .border({ radius: 10 })
-          .backgroundColor("#fefefe")
-          .margin({ bottom: 10 });
+          .padding({ bottom: 10 }).width("100%").border({ radius: 10 }).backgroundColor("#fefefe").margin({ bottom: 10 });
 
           // 轮播图区域
           Swiper() {
             ForEach(this.swiperList1, (item: SwiperItem) => {
-              Image(item.icon)
-                .border({ radius: 10 })
-                .width("100%")
-                .height("100%");
+              Image(item.icon).border({ radius: 10 }).width("100%").height("100%");
             });
           }
-          .width("100%")
-          .height(120)
-          .autoPlay(true)
-          .margin({ bottom: 30 });
+          .width("100%").height(120).autoPlay(true).margin({ bottom: 30 });
 
           // 动态区域
           Column() {
-            Text("动态")
-              .fontSize(20);
-          }
-          .justifyContent(FlexAlign.Start)
-          .width("100%")
-          .alignItems(HorizontalAlign.Start)
-          .margin({ bottom: 20 });
+            Text("动态").fontSize(20);
+          }.justifyContent(FlexAlign.Start).width("100%").alignItems(HorizontalAlign.Start).margin({ bottom: 20 });
 
           Row() {
             Column() {
-              Text("0元观看好演出")
-                .fontSize(18)
-                .fontWeight(FontWeight.Bold)
-                .margin({ bottom: 7 });
-              Text("观演团活动招募中")
-                .fontSize(18);
-            }
-            .alignItems(HorizontalAlign.Start)
-            .justifyContent(FlexAlign.Start)
-            .padding({
-              top: 5,
-              bottom: 5,
-              left: 5,
-              right: 5
-            })
-            .layoutWeight(1);
-
-            Image($r("app.media.more"))
-              .width(20);
+              Text("0元观看好演出").fontSize(18).fontWeight(FontWeight.Bold).margin({ bottom: 7 });
+              Text("观演团活动招募中").fontSize(18);
+            }.alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Start).padding({ top: 5, bottom: 5, left: 5, right: 5 }).layoutWeight(1);
+            Image($r("app.media.more")).width(20);
           }
-          .width("100%")
-          .backgroundColor("#fefefe")
-          .border({ radius: 10 })
-          .padding({
-            top: 10,
-            bottom: 10,
-            left: 10,
-            right: 10
-          });
+          .width("100%").backgroundColor("#fefefe").border({ radius: 10 }).padding({ top: 10, bottom: 10, left: 10, right: 10 });
         }
-        .padding(10)
-        .backgroundColor("#f4f4f4");
+        .padding(10).backgroundColor("#f4f4f4");
       }
     }
-    .width("100%")
-    .height('100%')
-    .scrollBar(BarState.Off);
+    .width("100%").height('100%').scrollBar(BarState.Off);
   }
 }
