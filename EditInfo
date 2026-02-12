@@ -1,0 +1,142 @@
+import { AppStorageV2, promptAction } from "@kit.ArkUI";
+
+@Builder
+export function EditInfoBuilder() {
+  EditInfo();
+}
+
+@Component
+struct EditInfo {
+  // 连接全局栈
+  pathStack: NavPathStack = AppStorageV2.connect(NavPathStack, 'navStack')!;
+
+  // 绑定全局用户信息，实现同步
+  @StorageLink('user_nickname') nickname: string = '麦子cqdu1';
+  @StorageLink('user_avatar') avatar: ResourceStr = $r("app.media.id");
+  @StorageLink('user_gender') gender: string = '女';
+  @StorageLink('user_birthday') birthday: string = '1990年01月01日';
+  @StorageLink('user_intro') intro: string = '';
+
+  build() {
+    NavDestination() {
+      Column() {
+        // --- 1. 顶部导航栏 ---
+        Row() {
+          // 返回按钮
+          Image($r('app.media.back')) // 如果没图，请用 Text('<')
+            .width(24)
+            .height(24)
+            .onClick(() => {
+              this.pathStack.pop();
+            })
+            // 兜底文本，防止图标缺失导致空白
+
+          // 标题
+          Text("编辑资料")
+            .fontSize(18)
+            .fontWeight(FontWeight.Medium)
+            .fontColor("#000000")
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .margin({ right: 24 }) // 平衡左侧图标宽度，使标题居中
+        }
+        .width('100%')
+        .height(50)
+        .padding({ left: 16, right: 16 })
+        .backgroundColor(Color.White)
+
+        // --- 2. 内容区域 (灰色背景) ---
+        Column() {
+          // 白色卡片
+          Column() {
+            // 头像
+            this.InfoItem("头像", true, () => {
+              promptAction.showToast({ message: "点击了修改头像" });
+            })
+            Divider().color("#F5F5F5").strokeWidth(1).margin({ left: 16, right: 16 })
+
+            // 昵称 (点击修改)
+            this.InfoItem("昵称", false, () => {
+              this.showEditDialog("修改昵称", (val) => { this.nickname = val });
+            }, this.nickname)
+            Divider().color("#F5F5F5").strokeWidth(1).margin({ left: 16, right: 16 })
+
+            // 简介
+            this.InfoItem("简介", false, () => {
+              this.showEditDialog("修改简介", (val) => { this.intro = val });
+            }, this.intro, "为你推荐感兴趣的内容")
+            Divider().color("#F5F5F5").strokeWidth(1).margin({ left: 16, right: 16 })
+
+            // 性别
+            this.InfoItem("性别", false, () => {
+              // 简单切换演示
+              this.gender = this.gender === '女' ? '男' : '女';
+            }, this.gender)
+            Divider().color("#F5F5F5").strokeWidth(1).margin({ left: 16, right: 16 })
+
+            // 生日
+            this.InfoItem("生日", false, () => {
+              promptAction.showToast({ message: "选择生日" });
+            }, this.birthday, "用于推荐内容、生日祝福")
+            Divider().color("#F5F5F5").strokeWidth(1).margin({ left: 16, right: 16 })
+
+            // 背景图
+            Row() {
+              Text("背景图").fontSize(16).fontColor("#333333")
+              Blank()
+              // 预览图
+              Image(this.avatar).width(40).height(25).borderRadius(4).objectFit(ImageFit.Cover).margin({ right: 8 }).backgroundColor(Color.Pink)
+              Text(" > ").fontColor("#CCCCCC").fontSize(18)
+            }
+            .width('100%').height(60).padding({ left: 16, right: 16 })
+            .onClick(() => { promptAction.showToast({ message: "修改背景图" }); })
+          }
+          .width('100%')
+          .backgroundColor(Color.White)
+          .borderRadius(12) // 卡片圆角
+        }
+        .width('100%')
+        .height('100%')
+        .padding(16) // 外边距
+        .backgroundColor("#F5F5F5") // 背景灰
+      }
+    }
+    .hideTitleBar(true)
+  }
+
+  // 封装列表项组件
+  @Builder
+  InfoItem(title: string, isAvatar: boolean, onClick: () => void, value?: string, placeholder?: string) {
+    Row() {
+      Text(title).fontSize(16).fontColor("#333333")
+      Blank()
+      if (isAvatar) {
+        Image(this.avatar).width(40).height(40).borderRadius(20).margin({ right: 8 })
+      } else {
+        if (value && value.length > 0) {
+          Text(value).fontSize(16).fontColor("#666666").margin({ right: 8 })
+        } else if (placeholder) {
+          Text(placeholder).fontSize(14).fontColor("#CCCCCC").margin({ right: 8 })
+        }
+      }
+      Text(" > ").fontColor("#CCCCCC").fontSize(18)
+    }
+    .width('100%').height(60).padding({ left: 16, right: 16 })
+    .backgroundColor(Color.White)
+    .onClick(onClick)
+  }
+
+  // 简易修改弹窗
+  showEditDialog(title: string, onConfirm: (val: string) => void) {
+    // 这里简单演示，实际可用 TextInput
+    AlertDialog.show({
+      title: title,
+      message: '请输入内容',
+      primaryButton: { value: '取消', action: () => {} },
+      secondaryButton: {
+        value: '随机生成',
+        action: () => { onConfirm("用户" + Math.floor(Math.random()*1000)) }
+      }
+    })
+  }
+}
