@@ -1,14 +1,23 @@
-import {AppStorageV2} from '@kit.ArkUI'
+import { AppStorageV2 } from '@kit.ArkUI';
+
 @Entry
 @ComponentV2
 struct Index {
-  pathStack : NavPathStack = AppStorageV2.connect(NavPathStack,'navStack',()=>new NavPathStack())!
+  // 初始化全局唯一的路由栈，并存入 'navStack'
+  pathStack: NavPathStack = AppStorageV2.connect(NavPathStack, 'navStack', () => new NavPathStack())!;
+
+  aboutToAppear(): void {
+    // 启动 App -> 推入广告页
+    this.pathStack.pushPathByName("Ad", null, false);
+  }
 
   build() {
-    Navigation(this.pathStack){
-    }.onAppear(() => {
-      this.pathStack.pushPathByName("Ad", null, false);
-    })
+    // 绑定栈到 Navigation
+    Navigation(this.pathStack) {
+      // 容器留空，全靠路由控制
+    }
     .hideNavBar(true)
+    .width('100%')
+    .height('100%')
   }
 }
