@@ -1,0 +1,54 @@
+{
+  "routerMap": [
+    {
+      "name": "Ad",
+      "pageSourceFile": "src/main/ets/pages/Ad.ets",
+      "buildFunction": "AdBuilder",
+      "data": {
+        "description" : "this is Ad"
+      }
+    },
+    {
+      "name": "Layouts",
+      "pageSourceFile": "src/main/ets/pages/Layouts.ets",
+      "buildFunction": "LayoutsBuilder",
+      "data": {
+        "description" : "this is Layouts"
+      }
+    },
+    {
+      "name": "Next",
+      "pageSourceFile": "src/main/ets/pages/Next.ets",
+      "buildFunction": "NextBuilder",
+      "data": {
+        "description" : "this is Next"
+      }
+    },
+    {
+      "name": "Searchs",
+      "pageSourceFile": "src/main/ets/pages/Searchs.ets",
+      "buildFunction": "SearchsBuilder",
+      "data": {
+        "description" : "this is Searchs"
+      }
+    },
+    {
+      "name": "Order",
+      "pageSourceFile": "src/main/ets/pages/Order.ets",
+      "buildFunction": "OrderBuilder",
+      "data": {
+        "description" : "this is Order"
+      }
+    },
+
+
+    {
+      "name": "detail",
+      "pageSourceFile": "src/main/ets/pages/detail.ets",
+      "buildFunction": "detailBuilder",
+      "data": {
+        "description" : "this is detail"
+      }
+    }
+  ]
+}
