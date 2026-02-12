@@ -3,52 +3,42 @@
     {
       "name": "Ad",
       "pageSourceFile": "src/main/ets/pages/Ad.ets",
-      "buildFunction": "AdBuilder",
-      "data": {
-        "description" : "this is Ad"
-      }
+      "buildFunction": "AdBuilder"
     },
     {
       "name": "Layouts",
       "pageSourceFile": "src/main/ets/pages/Layouts.ets",
-      "buildFunction": "LayoutsBuilder",
-      "data": {
-        "description" : "this is Layouts"
-      }
+      "buildFunction": "LayoutsBuilder"
+    },
+    {
+      "name": "login",
+      "pageSourceFile": "src/main/ets/pages/login.ets",
+      "buildFunction": "loginBuilder"
+    },
+    {
+      "name": "detail",
+      "pageSourceFile": "src/main/ets/pages/detail.ets",
+      "buildFunction": "detailBuilder"
     },
     {
       "name": "Next",
       "pageSourceFile": "src/main/ets/pages/Next.ets",
-      "buildFunction": "NextBuilder",
-      "data": {
-        "description" : "this is Next"
-      }
+      "buildFunction": "NextBuilder"
     },
     {
       "name": "Searchs",
       "pageSourceFile": "src/main/ets/pages/Searchs.ets",
-      "buildFunction": "SearchsBuilder",
-      "data": {
-        "description" : "this is Searchs"
-      }
+      "buildFunction": "SearchsBuilder"
     },
     {
       "name": "Order",
       "pageSourceFile": "src/main/ets/pages/Order.ets",
-      "buildFunction": "OrderBuilder",
-      "data": {
-        "description" : "this is Order"
-      }
+      "buildFunction": "OrderBuilder"
     },
-
-
     {
-      "name": "detail",
-      "pageSourceFile": "src/main/ets/pages/detail.ets",
-      "buildFunction": "detailBuilder",
-      "data": {
-        "description" : "this is detail"
-      }
+      "name": "EditInfo",
+      "pageSourceFile": "src/main/ets/pages/EditInfo.ets",
+      "buildFunction": "EditInfoBuilder"
     }
   ]
 }
