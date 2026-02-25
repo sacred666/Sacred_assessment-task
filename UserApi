@@ -1,0 +1,156 @@
+import http from '@ohos.net.http';
+import { LoginRequest, UserInfo, UpdateUserParams, LoginData, LogoutParams, AddAddressRequest } from '../model/UserModel';
+import { LoginStateManager } from '../utils/LoginStateManager';
+import { promptAction } from '@kit.ArkUI';
+
+const BASE_URL = 'http://8.136.46.14:8080';
+
+interface ResponseWrapper {
+  code?: number;
+  msg?: string;
+  data?: ResponseContent;
+  access_token?: string;
+  id?: string | number;
+  name?: string;
+  username?: string;
+  avatar?: string;
+  image?: string;
+  gender?: number;
+}
+interface ResponseContent extends UserInfo, LoginData {}
+
+class ImageBody {
+  image?: string = undefined;
+}
+
+export class UserApi {
+
+  static async login(params: LoginRequest): Promise<boolean> {
+    const httpRequest = http.createHttp();
+    try {
+      const response = await httpRequest.request(`${BASE_URL}/user/login`, {
+        method: http.RequestMethod.POST,
+        header: { 'Content-Type': 'application/json' },
+        extraData: params
+      });
+
+      if (response.responseCode === 200) {
+        const resObj = JSON.parse(response.result as string) as ResponseWrapper;
+        let token: string | undefined = undefined;
+        if (resObj.data) token = resObj.data.token || resObj.data.access_token;
+        else token = resObj.access_token;
+
+        if (token) {
+          await LoginStateManager.login(token);
+          // 登录时拉取一次基础信息即可
+          await UserApi.getUserInfo();
+          promptAction.showToast({ message: '登录成功' });
+          return true;
+        }
+      }
+      return false;
+    } catch (err) { return false; } finally { httpRequest.destroy(); }
+  }
+
+  static async getUserInfo(): Promise<void> {
+    const httpRequest = http.createHttp();
+    const token = await LoginStateManager.getToken();
+    if (token.length === 0) return;
+
+    try {
+      const response = await httpRequest.request(`${BASE_URL}/user/user`, {
+        method: http.RequestMethod.GET,
+        header: { 'Content-Type': 'application/json', 'token': token }
+      });
+
+      if (response.responseCode === 200) {
+        const resObj = JSON.parse(response.result as string) as ResponseWrapper;
+        let info: UserInfo | undefined = undefined;
+
+        if (resObj.data) info = resObj.data as UserInfo;
+        else if (resObj.id || resObj.username || resObj.name) {
+          info = {
+            id: resObj.id, name: resObj.name, username: resObj.username,
+            image: resObj.image || resObj.avatar, gender: resObj.gender
+          };
+        }
+
+        if (info) await LoginStateManager.saveUserInfo(info);
+      }
+    } catch (e) {} finally { httpRequest.destroy(); }
+  }
+
+  static async updateUserInfo(params: UpdateUserParams): Promise<boolean> {
+    const httpRequest = http.createHttp();
+    const token = await LoginStateManager.getToken();
+    if (token.length === 0) return false;
+
+    let urlParams: string[] =[];
+    if (params.name !== undefined) urlParams.push(`name=${encodeURIComponent(params.name)}`);
+    if (params.gender !== undefined) urlParams.push(`gender=${params.gender}`);
+    let query = urlParams.length > 0 ? `?${urlParams.join('&')}` : '';
+
+    let bodyData = new ImageBody();
+    if (params.image) bodyData.image = params.image;
+    else if (params.avatar) bodyData.image = params.avatar;
+
+    try {
+      const response = await httpRequest.request(`${BASE_URL}/user/user${query}`, {
+        method: http.RequestMethod.PUT,
+        header: { 'Content-Type': 'application/json', 'token': token },
+        extraData: bodyData
+      });
+
+      if (response.responseCode === 200) {
+        if (bodyData.image) params.image = bodyData.image;
+
+        // 1. 瞬间更新本地UI并保存到硬盘
+        await LoginStateManager.updateLocalUserInfo(params);
+
+        // 2. 【核心修复】注释掉这里！千万不要立刻去服务器拉取数据了！
+        // 因为你的 Apifox Mock 服务并没有真正保存数据，立刻拉取会拿回旧的假数据，把你刚存的硬盘给覆盖了
+        // await UserApi.getUserInfo();
+
+        promptAction.showToast({ message: '修改成功' });
+        return true;
+      }
+      return false;
+    } catch (e) { return false; } finally { httpRequest.destroy(); }
+  }
+
+  static async addAddress(addr: AddAddressRequest): Promise<boolean> {
+    const httpRequest = http.createHttp();
+    const token = await LoginStateManager.getToken();
+    if (token.length === 0) return false;
+    try {
+      const res = await httpRequest.request(`${BASE_URL}/user/user/map`, {
+        method: http.RequestMethod.POST,
+        header: { 'Content-Type': 'application/json', 'token': token },
+        extraData: addr
+      });
+      if (res.responseCode === 200) {
+        promptAction.showToast({ message: '地址保存成功' });
+        return true;
+      }
+      return false;
+    } catch (e) { return false; } finally { httpRequest.destroy(); }
+  }
+
+  static async logout(): Promise<void> {
+    const httpRequest = http.createHttp();
+    const token = await LoginStateManager.getToken();
+    if (token) {
+      try {
+        let logoutBody = new LogoutParams();
+        logoutBody.access_token = token;
+        await httpRequest.request(`${BASE_URL}/user/login/logout`, {
+          method: http.RequestMethod.POST,
+          header: { 'Content-Type': 'application/json', 'token': token },
+          extraData: logoutBody
+        });
+      } catch (e) {}
+    }
+    await LoginStateManager.logout();
+    promptAction.showToast({ message: '已退出' });
+  }
+}
