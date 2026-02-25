@@ -1,0 +1,23 @@
+// src/main/ets/utils/NavUtils.ets
+export class NavUtils {
+  // 全局唯一的路由栈实例
+  static readonly stack: NavPathStack = new NavPathStack();
+
+  static push(name: string) {
+    console.info(`NavUtils: push -> ${name}`);
+    NavUtils.stack.pushPathByName(name, null);
+  }
+
+  static pop() {
+    console.info(`NavUtils: pop`);
+    NavUtils.stack.pop();
+  }
+
+  static replace(name: string) {
+    NavUtils.stack.replacePathByName(name, null, false);
+  }
+
+  static clear() {
+    NavUtils.stack.clear();
+  }
+}
