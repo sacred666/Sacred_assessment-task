@@ -1,60 +1,136 @@
 import preferences from '@ohos.data.preferences';
 import common from '@ohos.app.ability.common';
+import { UserInfo, UpdateUserParams } from '../model/UserModel';
 
 export class LoginStateManager {
   private static readonly PREF_NAME = 'my_app_prefs';
   private static readonly KEY_LOGIN = 'is_logged_in';
+  private static readonly KEY_ACCESS_TOKEN = 'access_token';
+  private static readonly KEY_USER_NAME = 'user_nickname';
+  private static readonly KEY_USER_AVATAR = 'user_avatar';
+  private static readonly KEY_USER_GENDER = 'user_gender';
+
   private static context: common.UIAbilityContext;
 
-  // 【关键】接收 EntryAbility 传过来的 Context
   static setContext(context: common.UIAbilityContext) {
     LoginStateManager.context = context;
   }
 
-  // 执行登录
-  static async login() {
-    if (!LoginStateManager.context) return;
+  private static async getPref(): Promise<preferences.Preferences> {
+    if (!LoginStateManager.context) throw new Error("Context is null");
+    return await preferences.getPreferences(LoginStateManager.context, LoginStateManager.PREF_NAME);
+  }
+
+  static async getToken(): Promise<string> {
     try {
-      const pref = await preferences.getPreferences(LoginStateManager.context, LoginStateManager.PREF_NAME);
-      await pref.put(LoginStateManager.KEY_LOGIN, true);
+      const pref = await LoginStateManager.getPref();
+      return await pref.get(LoginStateManager.KEY_ACCESS_TOKEN, '') as string;
+    } catch (e) { return ''; }
+  }
+
+  static async login(accessToken: string): Promise<void> {
+    const pref = await LoginStateManager.getPref();
+    await pref.put(LoginStateManager.KEY_LOGIN, true);
+    await pref.put(LoginStateManager.KEY_ACCESS_TOKEN, accessToken);
+    await pref.flush();
+    AppStorage.setOrCreate('isLoggedIn', true);
+  }
+
+  // 保存完整信息（通常是登录或 getInfo 后调用）
+  static async saveUserInfo(info: UserInfo): Promise<void> {
+    const pref = await LoginStateManager.getPref();
+
+    let nameStr = (info.name && info.name.length > 0) ? info.name : (info.username || '大麦用户');
+    let avatarStr = info.image || info.avatar || '';
+    let genderVal = info.gender !== undefined ? Number(info.gender) : 0;
+
+    await pref.put(LoginStateManager.KEY_USER_NAME, nameStr);
+    await pref.put(LoginStateManager.KEY_USER_AVATAR, avatarStr);
+    await pref.put(LoginStateManager.KEY_USER_GENDER, genderVal);
+    await pref.flush();
+
+    AppStorage.setOrCreate('user_nickname', nameStr);
+    AppStorage.setOrCreate('user_avatar', avatarStr);
+
+    let genderText = '保密';
+    if (genderVal === 1) genderText = '男';
+    if (genderVal === 2) genderText = '女';
+    AppStorage.setOrCreate('user_gender_text', genderText);
+  }
+
+  // 【核心功能：修改后立即更新本地】
+  static async updateLocalUserInfo(params: UpdateUserParams): Promise<void> {
+    try {
+      const pref = await LoginStateManager.getPref();
+
+      // 1. 更新昵称
+      if (params.name !== undefined) {
+        // 更新内存 -> UI 秒变
+        AppStorage.setOrCreate('user_nickname', params.name);
+        // 更新硬盘 -> 杀进程保存
+        await pref.put(LoginStateManager.KEY_USER_NAME, params.name);
+      }
+
+      // 2. 更新头像
+      let newAvatar = params.image || params.avatar;
+      if (newAvatar !== undefined) {
+        AppStorage.setOrCreate('user_avatar', newAvatar);
+        await pref.put(LoginStateManager.KEY_USER_AVATAR, newAvatar);
+      }
+
+      // 3. 更新性别
+      if (params.gender !== undefined) {
+        let genderText = '保密';
+        if (params.gender === 1) genderText = '男';
+        if (params.gender === 2) genderText = '女';
+
+        AppStorage.setOrCreate('user_gender_text', genderText);
+        await pref.put(LoginStateManager.KEY_USER_GENDER, params.gender);
+      }
+
+      // 4. 必须刷盘
       await pref.flush();
-      // 更新全局状态，通知 UI 刷新
-      AppStorage.SetOrCreate('isLoggedIn', true);
-    } catch (err) {
-      console.error('Login failed:', err);
+      console.info('LoginStateManager: 本地数据已强制刷新并持久化');
+    } catch (e) {
+      console.error('Update local info error:', JSON.stringify(e));
     }
   }
 
-  // 退出登录
-  static async logout() {
-    if (!LoginStateManager.context) return;
+  static async logout(): Promise<void> {
+    const pref = await LoginStateManager.getPref();
+    await pref.put(LoginStateManager.KEY_LOGIN, false);
+    await pref.put(LoginStateManager.KEY_ACCESS_TOKEN, '');
+    await pref.put(LoginStateManager.KEY_USER_NAME, '');
+    await pref.put(LoginStateManager.KEY_USER_AVATAR, '');
+    await pref.flush();
+
+    AppStorage.setOrCreate('isLoggedIn', false);
+    AppStorage.setOrCreate('user_nickname', '点击登录');
+    AppStorage.setOrCreate('user_avatar', '');
+    AppStorage.setOrCreate('user_gender_text', '');
+  }
+
+  // 启动初始化
+  static async initLoginStatus(): Promise<void> {
     try {
-      const pref = await preferences.getPreferences(LoginStateManager.context, LoginStateManager.PREF_NAME);
-      await pref.put(LoginStateManager.KEY_LOGIN, false);
-      await pref.flush();
-      AppStorage.SetOrCreate('isLoggedIn', false);
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
+      const pref = await LoginStateManager.getPref();
+      const isLogin = await pref.get(LoginStateManager.KEY_LOGIN, false) as boolean;
+      const name = await pref.get(LoginStateManager.KEY_USER_NAME, '麦子cqdu1') as string;
+      const avatar = await pref.get(LoginStateManager.KEY_USER_AVATAR, '') as string;
+      const gender = await pref.get(LoginStateManager.KEY_USER_GENDER, 0) as number;
+
+      AppStorage.setOrCreate('isLoggedIn', isLogin);
+      AppStorage.setOrCreate('user_nickname', name);
+      AppStorage.setOrCreate('user_avatar', avatar);
+
+      let genderText = '保密';
+      if (gender === 1) genderText = '男';
+      if (gender === 2) genderText = '女';
+      AppStorage.setOrCreate('user_gender_text', genderText);
+    } catch (err) { AppStorage.setOrCreate('isLoggedIn', false); }
   }
 
-  // 初始化状态
-  static async initLoginStatus() {
-    if (!LoginStateManager.context) {
-      AppStorage.SetOrCreate('isLoggedIn', false);
-      return;
-    }
-    try {
-      const pref = await preferences.getPreferences(LoginStateManager.context, LoginStateManager.PREF_NAME);
-      const isLogin = await pref.get(LoginStateManager.KEY_LOGIN, false);
-      AppStorage.SetOrCreate('isLoggedIn', isLogin);
-    } catch (err) {
-      AppStorage.SetOrCreate('isLoggedIn', false);
-    }
-  }
-
-  // 获取当前状态
   static isLoggedIn(): boolean {
-    return AppStorage.Get('isLoggedIn') || false;
+    return AppStorage.get<boolean>('isLoggedIn') || false;
   }
 }
