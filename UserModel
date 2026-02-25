@@ -1,0 +1,51 @@
+// src/main/ets/model/UserModel.ets
+
+export interface LoginRequest {
+  account?: string;
+  password?: string;
+  type?: number;
+  email?: string;
+  code?: string;
+  name?: string;
+  image?: string;
+}
+
+export interface UserInfo {
+  id?: string | number;
+  name?: string;
+  username?: string;
+  avatar?: string;
+  image?: string;
+  gender?: number;
+}
+
+export interface UpdateUserParams {
+  name?: string;
+  avatar?: string;
+  image?: string;
+  gender?: number;
+}
+
+// 【修复报错】补全 AddAddressRequest
+export interface AddAddressRequest {
+  province: string;
+  city: string;
+  district: string;
+  detailedAddress: string;
+  isDefault: boolean;
+}
+
+export interface LoginData {
+  access_token: string;
+  refresh_token?: string;
+  token?: string;
+}
+
+export class LogoutParams {
+  access_token: string = '';
+  refresh_token: string = '';
+}
+
+export class ImageBody {
+  image?: string = undefined;
+}
