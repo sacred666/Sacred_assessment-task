@@ -1,6 +1,8 @@
 import { promptAction } from "@kit.ArkUI";
 import { UserApi } from "../api/UserApi";
 import { NavUtils } from "../utils/NavUtils";
+import picker from '@ohos.file.picker';
+import common from '@ohos.app.ability.common';
 
 @Builder export function EditInfoBuilder() { EditInfo(); }
 
@@ -40,33 +42,6 @@ struct GenderDialog {
   }
 }
 
-@CustomDialog
-struct AddAddressDialog {
-  controller: CustomDialogController;
-  @State detail: string = '';
-  build() {
-    Column() {
-      Text("新增收货地址").fontSize(18).fontWeight(FontWeight.Bold).margin({top:20, bottom:15})
-      Text("默认添加: 福建省 福州市").fontSize(14).fontColor("#666").margin({bottom:10})
-      TextInput({text: this.detail, placeholder:'请输入详细地址'}).onChange(v=>this.detail=v).width("85%").height(40).backgroundColor("#f5f5f5")
-      Row() {
-        Button("取消").onClick(()=>this.controller.close()).backgroundColor(Color.White).fontColor("#666").width("40%")
-        Button("保存").onClick(async ()=>{
-          if (this.detail) {
-            await UserApi.addAddress({
-              province: "福建省", city: "福州市", district: "鼓楼区",
-              detailedAddress: this.detail, isDefault: true
-            });
-            this.controller.close();
-          } else {
-            promptAction.showToast({ message: '请输入详细地址' });
-          }
-        }).backgroundColor(Color.White).fontColor("#FF7F24").width("40%")
-      }.width("100%").margin({top:20, bottom:10})
-    }.backgroundColor(Color.White).borderRadius(12).width("80%")
-  }
-}
-
 @Component
 struct EditInfo {
   @StorageLink('user_nickname') nickname: string = '麦子cqdu1';
@@ -75,16 +50,16 @@ struct EditInfo {
 
   dialogController: CustomDialogController | null = null;
   genderController: CustomDialogController | null = null;
-  addrController: CustomDialogController = new CustomDialogController({
-    builder: AddAddressDialog(), autoCancel: true, alignment: DialogAlignment.Center, customStyle: true
-  });
 
   openEditNameDialog() {
     this.dialogController = new CustomDialogController({
       builder: InputDialog({
         title: '修改昵称', textValue: this.nickname,
         onConfirm: async (val) => {
-          if (val.trim() !== '') await UserApi.updateUserInfo({ name: val });
+          if (val.trim() !== '') {
+            // 发起请求修改姓名
+            await UserApi.updateUserInfo({ name: val });
+          }
         }
       }), autoCancel: true, alignment: DialogAlignment.Center, customStyle: true
     });
@@ -94,23 +69,40 @@ struct EditInfo {
   openGenderDialog() {
     this.genderController = new CustomDialogController({
       builder: GenderDialog({
-        onSelect: async (g: number) => { await UserApi.updateUserInfo({ gender: g }); }
+        onSelect: async (g: number) => {
+          // 发起请求修改性别
+          await UserApi.updateUserInfo({ gender: g });
+        }
       }), autoCancel: true, alignment: DialogAlignment.Bottom, customStyle: true
     });
     this.genderController.open();
   }
 
-  openEditAvatarDialog() {
-    const nextAvatarUrl = `https://api.multiavatar.com/${Math.floor(Math.random() * 1000)}.png`;
-    this.dialogController = new CustomDialogController({
-      builder: InputDialog({
-        title: '修改头像URL', textValue: nextAvatarUrl,
-        onConfirm: async (val) => {
-          if (val.trim() !== '') await UserApi.updateUserInfo({ image: val });
+  async openPhotoPicker() {
+    try {
+      const photoSelectOptions = new picker.PhotoSelectOptions();
+      photoSelectOptions.MIMEType = picker.PhotoViewMIMETypes.IMAGE_TYPE;
+      photoSelectOptions.maxSelectNumber = 1;
+
+      const photoViewPicker = new picker.PhotoViewPicker();
+      const photoSelectResult = await photoViewPicker.select(photoSelectOptions);
+
+      if (photoSelectResult && photoSelectResult.photoUris.length > 0) {
+        const uri = photoSelectResult.photoUris[0];
+        promptAction.showToast({ message: '正在上传图片...' });
+
+        const context = getContext(this) as common.UIAbilityContext;
+        // 1. 先上传文件拿到 URL
+        const imageUrl = await UserApi.uploadImage(context, uri);
+
+        if (imageUrl && imageUrl.length > 0) {
+          // 2. 将拿到 URL 更新到用户信息
+          await UserApi.updateUserInfo({ image: imageUrl });
+        } else {
+          promptAction.showToast({ message: '图片上传失败' });
         }
-      }), autoCancel: true, alignment: DialogAlignment.Center, customStyle: true
-    });
-    this.dialogController.open();
+      }
+    } catch (err) { console.error('PhotoPicker failed'); }
   }
 
   build() {
@@ -123,15 +115,16 @@ struct EditInfo {
 
         Column() {
           Column() {
-            this.Item("头像", true, "", () => { this.openEditAvatarDialog(); })
+            this.Item("头像", true, "", () => { this.openPhotoPicker(); })
             Divider().color("#f5f5f5").margin({ left: 15, right: 15 })
+
             this.Item("昵称", false, this.nickname, () => { this.openEditNameDialog(); })
             Divider().color("#f5f5f5").margin({ left: 15, right: 15 })
+
             this.Item("简介", false, "", undefined, "为你推荐感兴趣的内容")
             Divider().color("#f5f5f5").margin({ left: 15, right: 15 })
+
             this.Item("性别", false, this.genderText, () => { this.openGenderDialog(); })
-            Divider().color("#f5f5f5").margin({ left: 15, right: 15 })
-            this.Item("收货地址", false, "", () => { this.addrController.open(); }, "管理地址")
           }.backgroundColor(Color.White).borderRadius(12).width("100%")
         }.padding(15).width("100%").layoutWeight(1).backgroundColor("#f5f5f5")
       }
