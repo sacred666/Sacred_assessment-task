@@ -1,6 +1,7 @@
+// src/main/ets/utils/LoginStateManager.ets
 import preferences from '@ohos.data.preferences';
 import common from '@ohos.app.ability.common';
-import { UserInfo } from '../model/UserModel';
+import { UserInfo, UpdateUserParams } from '../model/UserModel';
 
 export class LoginStateManager {
   private static readonly PREF_NAME = 'my_app_prefs';
@@ -9,7 +10,6 @@ export class LoginStateManager {
   private static readonly KEY_USER_NAME = 'user_nickname';
   private static readonly KEY_USER_AVATAR = 'user_avatar';
   private static readonly KEY_USER_GENDER = 'user_gender';
-  private static readonly KEY_USER_ID = 'user_id';
 
   private static context: common.UIAbilityContext;
 
@@ -39,7 +39,6 @@ export class LoginStateManager {
     } catch (e) {}
   }
 
-  // 【核心】从 API 获取到数据后，保存并刷新 UI
   static async saveUserInfo(info: UserInfo): Promise<void> {
     try {
       const pref = await LoginStateManager.getPref();
@@ -47,16 +46,12 @@ export class LoginStateManager {
       let nameStr = (info.name && info.name.length > 0) ? info.name : (info.username || '大麦用户');
       let avatarStr = info.image || info.avatar || '';
       let genderVal = info.gender !== undefined ? Number(info.gender) : 0;
-      let idStr = info.id !== undefined ? String(info.id) : '';
 
-      // 1. 存入硬盘 (持久化)
       await pref.put(LoginStateManager.KEY_USER_NAME, nameStr);
       await pref.put(LoginStateManager.KEY_USER_AVATAR, avatarStr);
       await pref.put(LoginStateManager.KEY_USER_GENDER, genderVal);
-      await pref.put(LoginStateManager.KEY_USER_ID, idStr);
       await pref.flush();
 
-      // 2. 更新内存 (UI 立即响应)
       AppStorage.setOrCreate('user_nickname', nameStr);
       AppStorage.setOrCreate('user_avatar', avatarStr);
 
@@ -64,8 +59,35 @@ export class LoginStateManager {
       if (genderVal === 1) genderText = '男';
       if (genderVal === 2) genderText = '女';
       AppStorage.setOrCreate('user_gender_text', genderText);
+    } catch (e) {}
+  }
 
-    } catch (e) { console.error('Save info failed'); }
+  // 【乐观更新】瞬间修改本地缓存和 UI
+  static async updateLocalUserInfo(params: UpdateUserParams): Promise<void> {
+    try {
+      const pref = await LoginStateManager.getPref();
+
+      if (params.name !== undefined) {
+        AppStorage.setOrCreate('user_nickname', params.name);
+        await pref.put(LoginStateManager.KEY_USER_NAME, params.name);
+      }
+
+      let newAvatar = params.image || params.avatar;
+      if (newAvatar !== undefined) {
+        AppStorage.setOrCreate('user_avatar', newAvatar);
+        await pref.put(LoginStateManager.KEY_USER_AVATAR, newAvatar);
+      }
+
+      if (params.gender !== undefined) {
+        let genderText = '保密';
+        if (params.gender === 1) genderText = '男';
+        if (params.gender === 2) genderText = '女';
+        AppStorage.setOrCreate('user_gender_text', genderText);
+        await pref.put(LoginStateManager.KEY_USER_GENDER, params.gender);
+      }
+
+      await pref.flush();
+    } catch (e) {}
   }
 
   static async logout(): Promise<void> {
@@ -75,7 +97,6 @@ export class LoginStateManager {
       await pref.put(LoginStateManager.KEY_ACCESS_TOKEN, '');
       await pref.put(LoginStateManager.KEY_USER_NAME, '');
       await pref.put(LoginStateManager.KEY_USER_AVATAR, '');
-      await pref.put(LoginStateManager.KEY_USER_GENDER, 0);
       await pref.flush();
 
       AppStorage.setOrCreate('isLoggedIn', false);
@@ -101,9 +122,7 @@ export class LoginStateManager {
       if (gender === 1) genderText = '男';
       if (gender === 2) genderText = '女';
       AppStorage.setOrCreate('user_gender_text', genderText);
-    } catch (err) {
-      AppStorage.setOrCreate('isLoggedIn', false);
-    }
+    } catch (err) { AppStorage.setOrCreate('isLoggedIn', false); }
   }
 
   static isLoggedIn(): boolean {
