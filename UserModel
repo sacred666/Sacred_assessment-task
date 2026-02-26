@@ -1,5 +1,3 @@
-// src/main/ets/model/UserModel.ets
-
 export interface LoginRequest {
   account?: string;
   password?: string;
@@ -26,7 +24,6 @@ export interface UpdateUserParams {
   gender?: number;
 }
 
-// 【修复报错】补全 AddAddressRequest
 export interface AddAddressRequest {
   province: string;
   city: string;
