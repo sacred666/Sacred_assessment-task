@@ -1,5 +1,5 @@
 import http from '@ohos.net.http';
-import { LoginRequest, UserInfo, UpdateUserParams, LoginData, LogoutParams, AddAddressRequest } from '../model/UserModel';
+import { LoginRequest, UserInfo, UpdateUserParams, LoginData, LogoutParams, AddAddressRequest, ImageBody } from '../model/UserModel';
 import { LoginStateManager } from '../utils/LoginStateManager';
 import { promptAction } from '@kit.ArkUI';
 
@@ -19,12 +19,9 @@ interface ResponseWrapper {
 }
 interface ResponseContent extends UserInfo, LoginData {}
 
-class ImageBody {
-  image?: string = undefined;
-}
-
 export class UserApi {
 
+  // 1. 登录
   static async login(params: LoginRequest): Promise<boolean> {
     const httpRequest = http.createHttp();
     try {
@@ -36,13 +33,11 @@ export class UserApi {
 
       if (response.responseCode === 200) {
         const resObj = JSON.parse(response.result as string) as ResponseWrapper;
-        let token: string | undefined = undefined;
-        if (resObj.data) token = resObj.data.token || resObj.data.access_token;
-        else token = resObj.access_token;
+        let token = resObj.data ? (resObj.data.token || resObj.data.access_token) : resObj.access_token;
 
-        if (token) {
+        if (token && token.length > 0) {
           await LoginStateManager.login(token);
-          // 登录时拉取一次基础信息即可
+          // 登录成功 -> 拉取最新数据
           await UserApi.getUserInfo();
           promptAction.showToast({ message: '登录成功' });
           return true;
@@ -52,6 +47,7 @@ export class UserApi {
     } catch (err) { return false; } finally { httpRequest.destroy(); }
   }
 
+  // 2. 获取用户信息
   static async getUserInfo(): Promise<void> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
@@ -67,49 +63,58 @@ export class UserApi {
         const resObj = JSON.parse(response.result as string) as ResponseWrapper;
         let info: UserInfo | undefined = undefined;
 
-        if (resObj.data) info = resObj.data as UserInfo;
-        else if (resObj.id || resObj.username || resObj.name) {
+        if (resObj.data) {
+          info = resObj.data as UserInfo;
+        } else if (resObj.id || resObj.username || resObj.name) {
           info = {
             id: resObj.id, name: resObj.name, username: resObj.username,
             image: resObj.image || resObj.avatar, gender: resObj.gender
           };
         }
 
+        // 拿到最新数据 -> 存入本地 -> 刷新 UI
         if (info) await LoginStateManager.saveUserInfo(info);
       }
     } catch (e) {} finally { httpRequest.destroy(); }
   }
 
+  // 3. 【核心修复】修改用户信息 (双重传参策略)
   static async updateUserInfo(params: UpdateUserParams): Promise<boolean> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
     if (token.length === 0) return false;
 
-    let urlParams: string[] =[];
+    // 策略 A: 拼接到 URL (Query Params)
+    let urlParams: string[] = [];
     if (params.name !== undefined) urlParams.push(`name=${encodeURIComponent(params.name)}`);
     if (params.gender !== undefined) urlParams.push(`gender=${params.gender}`);
     let query = urlParams.length > 0 ? `?${urlParams.join('&')}` : '';
+    const finalUrl = `${BASE_URL}/user/user${query}`;
 
-    let bodyData = new ImageBody();
-    if (params.image) bodyData.image = params.image;
-    else if (params.avatar) bodyData.image = params.avatar;
+    // 策略 B: 放入 Body (JSON)
+    // 我们把 name, gender, image 全部放进 Body，防止后端只读 Body 忽略 URL
+    let bodyData: Record<string, Object> = {};
+    if (params.image) bodyData['image'] = params.image;
+    else if (params.avatar) bodyData['image'] = params.avatar;
+
+    if (params.name !== undefined) bodyData['name'] = params.name;
+    if (params.gender !== undefined) bodyData['gender'] = params.gender;
+
+    console.info(`UserApi: 提交修改 -> URL: ${finalUrl}, Body: ${JSON.stringify(bodyData)}`);
 
     try {
-      const response = await httpRequest.request(`${BASE_URL}/user/user${query}`, {
+      const response = await httpRequest.request(finalUrl, {
         method: http.RequestMethod.PUT,
         header: { 'Content-Type': 'application/json', 'token': token },
-        extraData: bodyData
+        extraData: bodyData // 发送全量数据
       });
 
+      console.info(`UserApi: 修改响应码 -> ${response.responseCode}`);
+
       if (response.responseCode === 200) {
-        if (bodyData.image) params.image = bodyData.image;
-
-        // 1. 瞬间更新本地UI并保存到硬盘
-        await LoginStateManager.updateLocalUserInfo(params);
-
-        // 2. 【核心修复】注释掉这里！千万不要立刻去服务器拉取数据了！
-        // 因为你的 Apifox Mock 服务并没有真正保存数据，立刻拉取会拿回旧的假数据，把你刚存的硬盘给覆盖了
-        // await UserApi.getUserInfo();
+        // 修改成功 -> 立刻拉取最新数据
+        // 只有拉取到了，UI 才会变，确保持久化和显示的一致性
+        await UserApi.getUserInfo();
 
         promptAction.showToast({ message: '修改成功' });
         return true;
@@ -118,10 +123,11 @@ export class UserApi {
     } catch (e) { return false; } finally { httpRequest.destroy(); }
   }
 
+  // 4. 添加地址
   static async addAddress(addr: AddAddressRequest): Promise<boolean> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
-    if (token.length === 0) return false;
+    if (token.length == 0) return false;
     try {
       const res = await httpRequest.request(`${BASE_URL}/user/user/map`, {
         method: http.RequestMethod.POST,
@@ -136,10 +142,11 @@ export class UserApi {
     } catch (e) { return false; } finally { httpRequest.destroy(); }
   }
 
+  // 5. 退出登录
   static async logout(): Promise<void> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
-    if (token) {
+    if (token.length > 0) {
       try {
         let logoutBody = new LogoutParams();
         logoutBody.access_token = token;
@@ -151,6 +158,6 @@ export class UserApi {
       } catch (e) {}
     }
     await LoginStateManager.logout();
-    promptAction.showToast({ message: '已退出' });
+    promptAction.showToast({ message: '已退出登录' });
   }
 }
