@@ -4,20 +4,22 @@ import { LoginStateManager } from '../utils/LoginStateManager';
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    // 1. 必须第一步注入 Context，否则后续所有硬盘读写都会崩
     if (this.context) {
       LoginStateManager.setContext(this.context);
     }
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
-    // 【关键】等待硬盘读取完毕，再加载 UI
-    LoginStateManager.initLoginStatus().then(() => {
-      // 路由栈
-      AppStorage.setOrCreate('GlobalStack', new NavPathStack());
+    // 2. 初始化路由栈
+    AppStorage.setOrCreate('GlobalStack', new NavPathStack());
 
-      // 加载页面
+    // 3. 读取本地登录状态
+    LoginStateManager.initLoginStatus().then(() => {
+      // 数据准备好后，加载页面
       windowStage.loadContent('pages/Index', (err, data) => {
         if (err.code) {
+          console.error('Failed to load the content. Cause: ' + JSON.stringify(err));
           return;
         }
       });
