@@ -1,3 +1,5 @@
+// src/main/ets/model/UserModel.ets
+
 export interface LoginRequest {
   account?: string;
   password?: string;
@@ -45,4 +47,11 @@ export class LogoutParams {
 
 export class ImageBody {
   image?: string = undefined;
+}
+
+// 【关键修复】补上这个接口导出
+export interface UploadResponse {
+  code: number;
+  msg: string;
+  data: string; // 这里返回的是图片 URL
 }
