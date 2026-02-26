@@ -1,243 +1,76 @@
-// pages/Mine.ets - 已登录页面
-import { AppStorageV2 } from "@kit.ArkUI";
+import { UserApi } from "../api/UserApi";
+import { NavUtils } from "../utils/NavUtils";
 import { LoginStateManager } from "../utils/LoginStateManager";
 
-interface MineClass {
-  text: string;
-  icon: ResourceStr;
-}
-
-interface SwiperItem {
-  icon: ResourceStr;
-}
+interface MineClass { text: string; icon: ResourceStr; }
+interface SwiperItem { icon: ResourceStr; }
 
 @Component
 export struct Mine {
-  @State private currentindex: number = 0;
   @StorageLink('isLoggedIn') private isLoggedIn: boolean = false;
 
-  // 1. 获取全局栈
-  pathStack : NavPathStack = AppStorageV2.connect(NavPathStack,'navStack')!;
-
-  // 2. 【新增】绑定用户信息，与 EditInfo 页面同步
-  // 如果没设置过，给个默认值 '麦子cqdu1' 和默认头像
+  // 【自动响应】只要 LoginStateManager 更新了这里，界面就变
   @StorageLink('user_nickname') nickname: string = '麦子cqdu1';
-  @StorageLink('user_avatar') avatar: ResourceStr = $r("app.media.id");
+  @StorageLink('user_avatar') avatarStr: string = '';
 
   private Data: MineClass[] = [
-    { text: '我的订单', icon: $r('app.media.my') },
-    { text: '优惠券', icon: $r('app.media.ticket') },
-    { text: '观演人', icon: $r('app.media.man') },
-    { text: "收货地址", icon: $r('app.media.position') },
+    { text: '我的订单', icon: $r('app.media.my') }, { text: '优惠券', icon: $r('app.media.ticket') }, { text: '观演人', icon: $r('app.media.man') }, { text: "收货地址", icon: $r('app.media.position') },
   ];
-
   private Data1: MineClass[] = [
-    { text: '在线客服', icon: $r('app.media.auto') },
-    { text: '周边商城', icon: $r('app.media.supermarket') },
-    { text: '观演团', icon: $r('app.media.guanyan') },
-    { text: "用户反馈", icon: $r('app.media.feedback') },
+    { text: '在线客服', icon: $r('app.media.auto') }, { text: '周边商城', icon: $r('app.media.supermarket') }, { text: '观演团', icon: $r('app.media.guanyan') }, { text: "用户反馈", icon: $r('app.media.feedback') },
   ];
-
   private swiperList1: SwiperItem[] = [
-    { icon: $r("app.media.Sw5") },
-    { icon: $r("app.media.Sw6") },
-    { icon: $r("app.media.Sw7") },
+    { icon: $r("app.media.Sw5") }, { icon: $r("app.media.Sw6") }, { icon: $r("app.media.Sw7") },
   ];
 
-  // 退出登录函数
-  private async logout(): Promise<void> {
-    await LoginStateManager.logout();
-    this.isLoggedIn = false;
-    console.log('已退出登录');
-  }
+  private async logout(): Promise<void> { await UserApi.logout(); }
 
   aboutToAppear(): void {
-    // 获取当前登录状态
     this.isLoggedIn = LoginStateManager.isLoggedIn();
+    if (this.isLoggedIn) {
+      // 每次进入页面，也尝试同步一次最新数据
+      UserApi.getUserInfo();
+    }
   }
 
   build() {
     Scroll() {
       Column() {
-        // 设置 信息图标 + 退出登录按钮
         Row() {
-          Button('退出登录')
-            .width(80)
-            .height(30)
-            .backgroundColor('#FF7F24')
-            .fontColor(Color.White)
-            .fontSize(12)
-            .margin({ right: 10 })
-            .onClick(async () => {
-              await this.logout();
-            });
+          Button('退出登录').width(80).height(30).backgroundColor('#FF7F24').fontColor(Color.White).fontSize(12).margin({ right: 10 }).onClick(async () => { await this.logout(); });
+          Image($r("app.media.set")).width(25).height(25).margin({ right: 15 });
+          Image($r("app.media.message")).width(25).height(25);
+        }.justifyContent(FlexAlign.End).backgroundColor("#fbf2e9").width("100%").padding(15);
 
-          Image($r("app.media.set"))
-            .width(25)
-            .height(25)
-            .margin({ right: 15 })
-            .fillColor(Color.Black);
-          Image($r("app.media.message"))
-            .width(25)
-            .height(25)
-            .fillColor(Color.Black);
-        }
-        .justifyContent(FlexAlign.End)
-        .backgroundColor("#fbf2e9")
-        .width("100%")
-        .padding({right:10,top:10});
-
-        // --- 头像区域 (已修改：绑定数据 + 点击跳转) ---
         Row() {
-          // 绑定动态头像
-          Image(this.avatar)
-            .width(80)
-            .height(80)
-            .margin({ right: 15 })
-            .border({ radius: 50 })
-            .border({ style: BorderStyle.Solid })
-            .borderColor(Color.White);
-
+          Image(this.avatarStr && this.avatarStr.length > 0 ? this.avatarStr : $r("app.media.id"))
+            .width(80).height(80).margin({ right: 15 }).border({ radius: 40, style: BorderStyle.Solid }).borderColor(Color.White);
           Column() {
-            // 绑定动态昵称
-            Text(this.nickname)
-              .fontColor(Color.Black)
-              .fontSize(25)
-              .height(40)
-              .margin({ bottom: 6, top: 10 });
-
-            Row() {
-              Text("0").fontSize(20).margin({ right: 6 }).fontWeight(FontWeight.Bold);
-              Text("关注").fontColor(Color.Gray).fontSize(16).margin({ right: 11 });
-              Text("|").fontSize(12).margin({ right: 11 }).fontWeight(FontWeight.Lighter);
-              Text("0").fontSize(20).margin({ right: 6 }).fontWeight(FontWeight.Bold);
-              Text("粉丝").fontColor(Color.Gray).fontSize(16).margin({ right: 11 });
-              Text("|").fontSize(12).margin({ right: 11 }).fontWeight(FontWeight.Lighter);
-              Text("0").fontSize(20).margin({ right: 6 }).fontWeight(FontWeight.Bold);
-              Text("获赞与想看").fontColor(Color.Gray).fontSize(16).margin({ right: 11 });
-            }
-          }
-          .alignItems(HorizontalAlign.Start)
-          .height(100);
-
-          // 添加一个箭头提示可以点击
-          Blank()
-          Text(" > ").fontSize(20).fontColor(Color.Gray).margin({right:10})
+            Text(this.nickname).fontSize(25).fontWeight(FontWeight.Bold).height(40).margin({ bottom: 6 });
+            Text("0 关注 | 0 粉丝").fontColor(Color.Gray).fontSize(16);
+          }.alignItems(HorizontalAlign.Start).layoutWeight(1);
+          Text(" > ").fontSize(20).fontColor(Color.Gray).margin({ right: 10 })
         }
-        .width("100%")
-        .backgroundColor("#fbf2e9")
-        .padding({left:10})
-        .onClick(() => {
-          // 【核心跳转】点击整个头像区域，跳转到编辑资料页
-          this.pathStack.pushPathByName("EditInfo", null);
-        })
+        .width("100%").backgroundColor("#fbf2e9").padding({ left: 15, bottom: 25 })
+        .onClick(() => { NavUtils.push("EditInfo"); });
 
-        // ... 以下内容原封不动保留 ...
         Column() {
-          // 升级VIP区域
           Column() {
-            Row() {
-              Text("升级").fontSize(20).fontColor("#663300");
-              Text("大麦VIP").fontSize(20).fontWeight(FontWeight.Bold).fontColor("#663300");
-              Text("可享权益").fontSize(17).layoutWeight(1).fontColor("#663300");
-              Text("全部权益").fontSize(13).fontColor("#663300");
-              Image($r("app.media.more")).width(13);
-            }
-            .width("100%")
-            .margin({ bottom: 6 });
+            Row() { Text("升级").fontSize(20).fontColor("#663300"); Text("大麦VIP").fontSize(20).fontWeight(FontWeight.Bold).fontColor("#663300") }.width("100%")
+            Text("黑钻专享...").margin({top:10}).fontColor("#663300")
+          }.padding(15).width("100%").borderRadius(12).linearGradient({ direction: GradientDirection.Right, colors: [['#fde4ca', 0.0], ["#fdc19e", 0.3], ['#f4a87f', 1.0]] })
 
-            Row() {
-              Column() {
-                Text("黑钻").fontSize(16).fontColor("#e4d0c0").padding({ left: 10, right: 10, top: 10 });
-                Text("包厢").fontSize(16).fontColor("#e4d0c0").padding({ left: 10, right: 10, bottom: 10 });
-              }
-              .margin({ right: 8 }).backgroundColor('#2E2E2E').borderRadius(16);
-              Text("黑钻专享·【上海】浦发银行东方体育中心演唱会").fontSize(15).maxLines(2).fontColor("#663300").layoutWeight(1);
-              Text("去看看").border({ radius: 12 }).backgroundColor("#feead1").fontSize(13).padding({ top: 6, bottom: 6, left: 10, right: 10 });
-            }
-            .width("100%");
-          }
-          .padding({ left: 10, right: 10, top:10, bottom: 10 }).width("100%")
-          .linearGradient({ direction: GradientDirection.Right, colors: [['#fde4ca', 0.0], ["#fdc19e", 0.3], ['#f4a87f', 1.0]] })
-          .border({ radius: 12 });
-
-          // 四个图标区域 (保留 Next 跳转逻辑)
           Row() {
             ForEach(this.Data, (item: MineClass, index: number) => {
-              Column() {
-                Image(item.icon)
-                  .onClick(() => {
-                    // 保留原有的跳转逻辑
-                    if (index === 0) {
-                      this.pathStack.pushPathByName('Next', null, false);
-                    }
-                  })
-                  .width(40).fillColor("#d0accb").margin({ bottom: 10 }).padding({ top: 20 });
-                Text(item.text).fontSize(12).textAlign(TextAlign.Center).width('auto').padding({ bottom: 10 });
-              }
-              .width(60).margin({ right: 10 });
-            });
-          }
-          .padding({ left: 10 }).justifyContent(FlexAlign.SpaceEvenly).width("100%").backgroundColor("#fefefe").margin({ bottom: 10 }).border({ radius: 12 });
+              Column() { Image(item.icon).width(40).margin({ bottom: 10 }); Text(item.text).fontSize(12); }.width(60).onClick(() => { if (index === 0) NavUtils.push('Next'); })
+            })
+          }.justifyContent(FlexAlign.SpaceEvenly).width("100%").backgroundColor("#fff").borderRadius(12).padding(15).margin({ top: 15 })
 
-          // 想看区域
-          Row() {
-            Row() {
-              Text("想看").fontSize(14).padding({ left: 10, top: 20, bottom: 20 }).layoutWeight(1);
-              Image($r("app.media.more")).width(14);
-            }.width("45%").margin({ right: 10 });
-
-            Text("|").fontColor(Color.Gray);
-            Row() {
-              Text("抢票预约").fontSize(14).padding({ left: 10, top: 20, bottom: 20 }).layoutWeight(1);
-              Image($r("app.media.more")).width(14);
-            }.margin({ left: 2 }).width("45%");
-          }
-          .width("100%").backgroundColor("#fefefe").border({ radius: 10 }).margin({ bottom: 10 });
-
-          // 在线客服区域
-          Column() {
-            Row() {
-              ForEach(this.Data1, (item: MineClass, index: number) => {
-                Column() {
-                  Image(item.icon).width(30).fillColor("#353535").margin({ bottom: 10 }).padding({ top: 20 });
-                  Text(item.text).fontSize(12).fontWeight(FontWeight.Bold).textAlign(TextAlign.Center).width('auto').padding({ bottom: 10 });
-                }.width(60).margin({ right: 10 });
-              });
-            }.padding({ left: 10 }).justifyContent(FlexAlign.SpaceEvenly).width("100%").margin({ bottom: 5 });
-
-            Row() {
-              Row().width("50%").height("50%").backgroundColor("#e83b73");
-              Row().backgroundColor("#faebf0").width("50%").height("50%");
-            }.height(5).width(25).border({ radius: 30 }).borderColor(Color.White).backgroundColor("#f7286e").justifyContent(FlexAlign.Center);
-          }
-          .padding({ bottom: 10 }).width("100%").border({ radius: 10 }).backgroundColor("#fefefe").margin({ bottom: 10 });
-
-          // 轮播图区域
-          Swiper() {
-            ForEach(this.swiperList1, (item: SwiperItem) => {
-              Image(item.icon).border({ radius: 10 }).width("100%").height("100%");
-            });
-          }
-          .width("100%").height(120).autoPlay(true).margin({ bottom: 30 });
-
-          // 动态区域
-          Column() {
-            Text("动态").fontSize(20);
-          }.justifyContent(FlexAlign.Start).width("100%").alignItems(HorizontalAlign.Start).margin({ bottom: 20 });
-
-          Row() {
-            Column() {
-              Text("0元观看好演出").fontSize(18).fontWeight(FontWeight.Bold).margin({ bottom: 7 });
-              Text("观演团活动招募中").fontSize(18);
-            }.alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Start).padding({ top: 5, bottom: 5, left: 5, right: 5 }).layoutWeight(1);
-            Image($r("app.media.more")).width(20);
-          }
-          .width("100%").backgroundColor("#fefefe").border({ radius: 10 }).padding({ top: 10, bottom: 10, left: 10, right: 10 });
-        }
-        .padding(10).backgroundColor("#f4f4f4");
+          Row() { Row() { Text("想看").fontSize(14).layoutWeight(1); Image($r("app.media.more")).width(14) }.width("45%").margin({ right: 10 }).padding(15); Text("|").fontColor(Color.Gray); Row() { Text("抢票预约").fontSize(14).layoutWeight(1); Image($r("app.media.more")).width(14) }.width("45%").padding(15) }.width("100%").backgroundColor("#fff").borderRadius(10).margin({ bottom: 10 })
+          Column() { Row() { ForEach(this.Data1, (item: MineClass, index: number) => { Column() { Image(item.icon).width(30).margin({ bottom: 10 }); Text(item.text).fontSize(12).fontWeight(FontWeight.Bold) }.width(60).margin({ right: 10 }) }) }.justifyContent(FlexAlign.SpaceEvenly).width("100%") }.backgroundColor("#fff").borderRadius(10).margin({ bottom: 10 })
+          Swiper() { ForEach(this.swiperList1, (item: SwiperItem) => { Image(item.icon).border({ radius: 10 }).width("100%").height(120) }) }.autoPlay(true).height(120).margin({ bottom: 30 })
+        }.padding(10).backgroundColor("#f4f4f4")
       }
-    }
-    .width("100%").height('100%').scrollBar(BarState.Off);
+    }.scrollBar(BarState.Off)
   }
 }
