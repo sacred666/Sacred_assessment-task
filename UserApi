@@ -1,14 +1,16 @@
 import http from '@ohos.net.http';
-import { LoginRequest, UserInfo, UpdateUserParams, LoginData, LogoutParams, AddAddressRequest, ImageBody } from '../model/UserModel';
+import { LoginRequest, UserInfo, UpdateUserParams, LoginData, LogoutParams, AddAddressRequest, ImageBody, UploadResponse } from '../model/UserModel';
 import { LoginStateManager } from '../utils/LoginStateManager';
 import { promptAction } from '@kit.ArkUI';
+import fs from '@ohos.file.fs';
+import util from '@ohos.util';
+import { common } from '@kit.AbilityKit';
 
 const BASE_URL = 'http://8.136.46.14:8080';
 
-interface ResponseWrapper {
-  code?: number;
-  msg?: string;
-  data?: ResponseContent;
+// 定义接口响应结构
+interface BackendData {
+  token?: string;
   access_token?: string;
   id?: string | number;
   name?: string;
@@ -17,7 +19,20 @@ interface ResponseWrapper {
   image?: string;
   gender?: number;
 }
-interface ResponseContent extends UserInfo, LoginData {}
+
+interface ResponseWrapper {
+  code?: number;
+  msg?: string;
+  data?: BackendData;
+  access_token?: string;
+  token?: string;
+  id?: string | number;
+  name?: string;
+  username?: string;
+  avatar?: string;
+  image?: string;
+  gender?: number;
+}
 
 export class UserApi {
 
@@ -33,18 +48,31 @@ export class UserApi {
 
       if (response.responseCode === 200) {
         const resObj = JSON.parse(response.result as string) as ResponseWrapper;
-        let token = resObj.data ? (resObj.data.token || resObj.data.access_token) : resObj.access_token;
+        let token: string | undefined = undefined;
 
-        if (token && token.length > 0) {
+        if (resObj.data !== undefined) {
+          token = resObj.data.token || resObj.data.access_token;
+        } else {
+          token = resObj.token || resObj.access_token;
+        }
+
+        if (token !== undefined && token.length > 0) {
           await LoginStateManager.login(token);
           // 登录成功 -> 拉取最新数据
           await UserApi.getUserInfo();
           promptAction.showToast({ message: '登录成功' });
           return true;
+        } else {
+          promptAction.showToast({ message: resObj.msg || '登录失败' });
         }
       }
       return false;
-    } catch (err) { return false; } finally { httpRequest.destroy(); }
+    } catch (err) {
+      promptAction.showToast({ message: '网络请求失败' });
+      return false;
+    } finally {
+      httpRequest.destroy();
+    }
   }
 
   // 2. 获取用户信息
@@ -63,39 +91,63 @@ export class UserApi {
         const resObj = JSON.parse(response.result as string) as ResponseWrapper;
         let info: UserInfo | undefined = undefined;
 
-        if (resObj.data) {
-          info = resObj.data as UserInfo;
-        } else if (resObj.id || resObj.username || resObj.name) {
+        if (resObj.data !== undefined) {
           info = {
-            id: resObj.id, name: resObj.name, username: resObj.username,
-            image: resObj.image || resObj.avatar, gender: resObj.gender
+            id: resObj.data.id !== undefined ? resObj.data.id : '',
+            name: resObj.data.name,
+            username: resObj.data.username,
+            avatar: resObj.data.avatar,
+            image: resObj.data.image,
+            gender: resObj.data.gender
+          };
+        } else if (resObj.id !== undefined) {
+          info = {
+            id: resObj.id,
+            name: resObj.name,
+            username: resObj.username,
+            avatar: resObj.avatar,
+            image: resObj.image,
+            gender: resObj.gender
           };
         }
 
-        // 拿到最新数据 -> 存入本地 -> 刷新 UI
-        if (info) await LoginStateManager.saveUserInfo(info);
+        if (info !== undefined) {
+          // 这一步会将最新数据写入硬盘，并刷新 UI
+          await LoginStateManager.saveUserInfo(info);
+        }
       }
     } catch (e) {} finally { httpRequest.destroy(); }
   }
 
-  // 3. 【核心修复】修改用户信息 (双重传参策略)
+  // 3. 【双重保险】修改用户信息
   static async updateUserInfo(params: UpdateUserParams): Promise<boolean> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
     if (token.length === 0) return false;
 
-    // 策略 A: 拼接到 URL (Query Params)
+    // --- 策略 A: 拼接到 URL (Query Params) ---
+    // 这是根据你提供的 curl 做的适配
     let urlParams: string[] = [];
-    if (params.name !== undefined) urlParams.push(`name=${encodeURIComponent(params.name)}`);
-    if (params.gender !== undefined) urlParams.push(`gender=${params.gender}`);
-    let query = urlParams.length > 0 ? `?${urlParams.join('&')}` : '';
-    const finalUrl = `${BASE_URL}/user/user${query}`;
+    if (params.name !== undefined) {
+      // 必须编码，防止中文乱码
+      urlParams.push(`name=${encodeURIComponent(params.name)}`);
+    }
+    if (params.gender !== undefined) {
+      urlParams.push(`gender=${params.gender}`);
+    }
+    let queryString = '';
+    if (urlParams.length > 0) {
+      queryString = `?${urlParams.join('&')}`;
+    }
+    const finalUrl = `${BASE_URL}/user/user${queryString}`;
 
-    // 策略 B: 放入 Body (JSON)
-    // 我们把 name, gender, image 全部放进 Body，防止后端只读 Body 忽略 URL
+    // --- 策略 B: 放入 Body (JSON) ---
+    // 为了防止后端某些框架只读 Body 忽略 URL，我们把数据也塞进 Body 里
+    // 这样无论后端读哪里，都能读到数据
     let bodyData: Record<string, Object> = {};
-    if (params.image) bodyData['image'] = params.image;
-    else if (params.avatar) bodyData['image'] = params.avatar;
+
+    if (params.image !== undefined) bodyData['image'] = params.image;
+    else if (params.avatar !== undefined) bodyData['image'] = params.avatar;
 
     if (params.name !== undefined) bodyData['name'] = params.name;
     if (params.gender !== undefined) bodyData['gender'] = params.gender;
@@ -109,11 +161,11 @@ export class UserApi {
         extraData: bodyData // 发送全量数据
       });
 
-      console.info(`UserApi: 修改响应码 -> ${response.responseCode}`);
-
       if (response.responseCode === 200) {
-        // 修改成功 -> 立刻拉取最新数据
-        // 只有拉取到了，UI 才会变，确保持久化和显示的一致性
+        // 【闭环核心】
+        // 1. 此时后端数据库已经修改成功了。
+        // 2. 我们立即调用 getUserInfo()，去后端把刚改好的数据拉回来。
+        // 3. getUserInfo() 会调用 saveUserInfo()，把新数据存入本地并刷新 UI。
         await UserApi.getUserInfo();
 
         promptAction.showToast({ message: '修改成功' });
@@ -123,11 +175,52 @@ export class UserApi {
     } catch (e) { return false; } finally { httpRequest.destroy(); }
   }
 
-  // 4. 添加地址
+  // 4. 上传图片
+  static async uploadImage(context: common.UIAbilityContext, fileUri: string): Promise<string> {
+    const httpRequest = http.createHttp();
+    try {
+      const file = fs.openSync(fileUri, fs.OpenMode.READ_ONLY);
+      const fileStat = fs.statSync(file.fd);
+      const buf = new ArrayBuffer(fileStat.size);
+      fs.readSync(file.fd, buf);
+      fs.closeSync(file);
+
+      const boundary = '----WebKitFormBoundary' + new Date().getTime();
+      const head = `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="avatar.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`;
+      const tail = `\r\n--${boundary}--\r\n`;
+
+      const textEncoder = new util.TextEncoder();
+      const headBuf = textEncoder.encodeInto(head);
+      const tailBuf = textEncoder.encodeInto(tail);
+      const totalSize = headBuf.length + buf.byteLength + tailBuf.length;
+      const fullBuf = new Uint8Array(totalSize);
+      fullBuf.set(headBuf, 0);
+      fullBuf.set(new Uint8Array(buf), headBuf.length);
+      fullBuf.set(tailBuf, headBuf.length + buf.byteLength);
+
+      const response = await httpRequest.request(`${BASE_URL}/user/upload`, {
+        method: http.RequestMethod.POST,
+        header: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+        extraData: fullBuf.buffer
+      });
+
+      if (response.responseCode === 200) {
+        const resObj = JSON.parse(response.result as string) as UploadResponse;
+        if (resObj.code === 1 && resObj.data) {
+          return resObj.data;
+        }
+      }
+      return '';
+    } catch (e) {
+      return '';
+    } finally { httpRequest.destroy(); }
+  }
+
+  // 5. 添加地址
   static async addAddress(addr: AddAddressRequest): Promise<boolean> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
-    if (token.length == 0) return false;
+    if (token.length === 0) return false;
     try {
       const res = await httpRequest.request(`${BASE_URL}/user/user/map`, {
         method: http.RequestMethod.POST,
@@ -142,7 +235,7 @@ export class UserApi {
     } catch (e) { return false; } finally { httpRequest.destroy(); }
   }
 
-  // 5. 退出登录
+  // 6. 退出登录
   static async logout(): Promise<void> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
@@ -159,5 +252,6 @@ export class UserApi {
     }
     await LoginStateManager.logout();
     promptAction.showToast({ message: '已退出登录' });
+    httpRequest.destroy();
   }
 }
