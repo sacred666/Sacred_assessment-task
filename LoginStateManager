@@ -1,6 +1,6 @@
 import preferences from '@ohos.data.preferences';
 import common from '@ohos.app.ability.common';
-import { UserInfo, UpdateUserParams } from '../model/UserModel';
+import { UserInfo } from '../model/UserModel';
 
 export class LoginStateManager {
   private static readonly PREF_NAME = 'my_app_prefs';
@@ -9,6 +9,7 @@ export class LoginStateManager {
   private static readonly KEY_USER_NAME = 'user_nickname';
   private static readonly KEY_USER_AVATAR = 'user_avatar';
   private static readonly KEY_USER_GENDER = 'user_gender';
+  private static readonly KEY_USER_ID = 'user_id';
 
   private static context: common.UIAbilityContext;
 
@@ -29,88 +30,61 @@ export class LoginStateManager {
   }
 
   static async login(accessToken: string): Promise<void> {
-    const pref = await LoginStateManager.getPref();
-    await pref.put(LoginStateManager.KEY_LOGIN, true);
-    await pref.put(LoginStateManager.KEY_ACCESS_TOKEN, accessToken);
-    await pref.flush();
-    AppStorage.setOrCreate('isLoggedIn', true);
+    try {
+      const pref = await LoginStateManager.getPref();
+      await pref.put(LoginStateManager.KEY_LOGIN, true);
+      await pref.put(LoginStateManager.KEY_ACCESS_TOKEN, accessToken);
+      await pref.flush();
+      AppStorage.setOrCreate('isLoggedIn', true);
+    } catch (e) {}
   }
 
-  // 保存完整信息（通常是登录或 getInfo 后调用）
+  // 【核心】从 API 获取到数据后，保存并刷新 UI
   static async saveUserInfo(info: UserInfo): Promise<void> {
-    const pref = await LoginStateManager.getPref();
-
-    let nameStr = (info.name && info.name.length > 0) ? info.name : (info.username || '大麦用户');
-    let avatarStr = info.image || info.avatar || '';
-    let genderVal = info.gender !== undefined ? Number(info.gender) : 0;
-
-    await pref.put(LoginStateManager.KEY_USER_NAME, nameStr);
-    await pref.put(LoginStateManager.KEY_USER_AVATAR, avatarStr);
-    await pref.put(LoginStateManager.KEY_USER_GENDER, genderVal);
-    await pref.flush();
-
-    AppStorage.setOrCreate('user_nickname', nameStr);
-    AppStorage.setOrCreate('user_avatar', avatarStr);
-
-    let genderText = '保密';
-    if (genderVal === 1) genderText = '男';
-    if (genderVal === 2) genderText = '女';
-    AppStorage.setOrCreate('user_gender_text', genderText);
-  }
-
-  // 【核心功能：修改后立即更新本地】
-  static async updateLocalUserInfo(params: UpdateUserParams): Promise<void> {
     try {
       const pref = await LoginStateManager.getPref();
 
-      // 1. 更新昵称
-      if (params.name !== undefined) {
-        // 更新内存 -> UI 秒变
-        AppStorage.setOrCreate('user_nickname', params.name);
-        // 更新硬盘 -> 杀进程保存
-        await pref.put(LoginStateManager.KEY_USER_NAME, params.name);
-      }
+      let nameStr = (info.name && info.name.length > 0) ? info.name : (info.username || '大麦用户');
+      let avatarStr = info.image || info.avatar || '';
+      let genderVal = info.gender !== undefined ? Number(info.gender) : 0;
+      let idStr = info.id !== undefined ? String(info.id) : '';
 
-      // 2. 更新头像
-      let newAvatar = params.image || params.avatar;
-      if (newAvatar !== undefined) {
-        AppStorage.setOrCreate('user_avatar', newAvatar);
-        await pref.put(LoginStateManager.KEY_USER_AVATAR, newAvatar);
-      }
-
-      // 3. 更新性别
-      if (params.gender !== undefined) {
-        let genderText = '保密';
-        if (params.gender === 1) genderText = '男';
-        if (params.gender === 2) genderText = '女';
-
-        AppStorage.setOrCreate('user_gender_text', genderText);
-        await pref.put(LoginStateManager.KEY_USER_GENDER, params.gender);
-      }
-
-      // 4. 必须刷盘
+      // 1. 存入硬盘 (持久化)
+      await pref.put(LoginStateManager.KEY_USER_NAME, nameStr);
+      await pref.put(LoginStateManager.KEY_USER_AVATAR, avatarStr);
+      await pref.put(LoginStateManager.KEY_USER_GENDER, genderVal);
+      await pref.put(LoginStateManager.KEY_USER_ID, idStr);
       await pref.flush();
-      console.info('LoginStateManager: 本地数据已强制刷新并持久化');
-    } catch (e) {
-      console.error('Update local info error:', JSON.stringify(e));
-    }
+
+      // 2. 更新内存 (UI 立即响应)
+      AppStorage.setOrCreate('user_nickname', nameStr);
+      AppStorage.setOrCreate('user_avatar', avatarStr);
+
+      let genderText = '保密';
+      if (genderVal === 1) genderText = '男';
+      if (genderVal === 2) genderText = '女';
+      AppStorage.setOrCreate('user_gender_text', genderText);
+
+    } catch (e) { console.error('Save info failed'); }
   }
 
   static async logout(): Promise<void> {
-    const pref = await LoginStateManager.getPref();
-    await pref.put(LoginStateManager.KEY_LOGIN, false);
-    await pref.put(LoginStateManager.KEY_ACCESS_TOKEN, '');
-    await pref.put(LoginStateManager.KEY_USER_NAME, '');
-    await pref.put(LoginStateManager.KEY_USER_AVATAR, '');
-    await pref.flush();
+    try {
+      const pref = await LoginStateManager.getPref();
+      await pref.put(LoginStateManager.KEY_LOGIN, false);
+      await pref.put(LoginStateManager.KEY_ACCESS_TOKEN, '');
+      await pref.put(LoginStateManager.KEY_USER_NAME, '');
+      await pref.put(LoginStateManager.KEY_USER_AVATAR, '');
+      await pref.put(LoginStateManager.KEY_USER_GENDER, 0);
+      await pref.flush();
 
-    AppStorage.setOrCreate('isLoggedIn', false);
-    AppStorage.setOrCreate('user_nickname', '点击登录');
-    AppStorage.setOrCreate('user_avatar', '');
-    AppStorage.setOrCreate('user_gender_text', '');
+      AppStorage.setOrCreate('isLoggedIn', false);
+      AppStorage.setOrCreate('user_nickname', '点击登录');
+      AppStorage.setOrCreate('user_avatar', '');
+      AppStorage.setOrCreate('user_gender_text', '');
+    } catch (e) {}
   }
 
-  // 启动初始化
   static async initLoginStatus(): Promise<void> {
     try {
       const pref = await LoginStateManager.getPref();
@@ -127,7 +101,9 @@ export class LoginStateManager {
       if (gender === 1) genderText = '男';
       if (gender === 2) genderText = '女';
       AppStorage.setOrCreate('user_gender_text', genderText);
-    } catch (err) { AppStorage.setOrCreate('isLoggedIn', false); }
+    } catch (err) {
+      AppStorage.setOrCreate('isLoggedIn', false);
+    }
   }
 
   static isLoggedIn(): boolean {
