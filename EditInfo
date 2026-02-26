@@ -1,7 +1,6 @@
 import { promptAction } from "@kit.ArkUI";
 import { UserApi } from "../api/UserApi";
 import { NavUtils } from "../utils/NavUtils";
-import { LoginStateManager } from "../utils/LoginStateManager";
 
 @Builder export function EditInfoBuilder() { EditInfo(); }
 
@@ -26,48 +25,88 @@ struct InputDialog {
   }
 }
 
+@CustomDialog
+struct GenderDialog {
+  controller: CustomDialogController;
+  onSelect: (gender: number) => void = () => {};
+  build() {
+    Column() {
+      Text("选择性别").fontSize(16).margin({ top: 15, bottom: 10 }).fontColor("#999")
+      Button("男").onClick(() => { this.onSelect(1); this.controller.close(); }).width("100%").backgroundColor(Color.White).fontColor("#333").height(50)
+      Divider().color("#eee")
+      Button("女").onClick(() => { this.onSelect(2); this.controller.close(); }).width("100%").backgroundColor(Color.White).fontColor("#333").height(50)
+      Button("取消").onClick(() => { this.controller.close() }).width("100%").backgroundColor(Color.White).fontColor("#666").height(50)
+    }.backgroundColor(Color.White).width("100%").borderRadius({ topLeft: 12, topRight: 12 })
+  }
+}
+
+@CustomDialog
+struct AddAddressDialog {
+  controller: CustomDialogController;
+  @State detail: string = '';
+  build() {
+    Column() {
+      Text("新增收货地址").fontSize(18).fontWeight(FontWeight.Bold).margin({top:20, bottom:15})
+      Text("默认添加: 福建省 福州市").fontSize(14).fontColor("#666").margin({bottom:10})
+      TextInput({text: this.detail, placeholder:'请输入详细地址'}).onChange(v=>this.detail=v).width("85%").height(40).backgroundColor("#f5f5f5")
+      Row() {
+        Button("取消").onClick(()=>this.controller.close()).backgroundColor(Color.White).fontColor("#666").width("40%")
+        Button("保存").onClick(async ()=>{
+          if (this.detail) {
+            await UserApi.addAddress({
+              province: "福建省", city: "福州市", district: "鼓楼区",
+              detailedAddress: this.detail, isDefault: true
+            });
+            this.controller.close();
+          } else {
+            promptAction.showToast({ message: '请输入详细地址' });
+          }
+        }).backgroundColor(Color.White).fontColor("#FF7F24").width("40%")
+      }.width("100%").margin({top:20, bottom:10})
+    }.backgroundColor(Color.White).borderRadius(12).width("80%")
+  }
+}
+
 @Component
 struct EditInfo {
-  // 这两个变量直接连着 Mine 页面
   @StorageLink('user_nickname') nickname: string = '麦子cqdu1';
   @StorageLink('user_avatar') avatarStr: string = '';
+  @StorageLink('user_gender_text') genderText: string = '保密';
 
   dialogController: CustomDialogController | null = null;
+  genderController: CustomDialogController | null = null;
+  addrController: CustomDialogController = new CustomDialogController({
+    builder: AddAddressDialog(), autoCancel: true, alignment: DialogAlignment.Center, customStyle: true
+  });
 
   openEditNameDialog() {
     this.dialogController = new CustomDialogController({
       builder: InputDialog({
         title: '修改昵称', textValue: this.nickname,
         onConfirm: async (val) => {
-          if (val.trim() !== '') {
-            // 1. 瞬间更新 UI（乐观更新）
-            this.nickname = val;
-            // 2. 瞬间存入手机硬盘防丢失
-            LoginStateManager.updateLocalUserInfo({ name: val });
-            // 3. 后台默默发送给服务器
-            UserApi.updateUserInfo({ name: val });
-          }
+          if (val.trim() !== '') await UserApi.updateUserInfo({ name: val });
         }
       }), autoCancel: true, alignment: DialogAlignment.Center, customStyle: true
     });
     this.dialogController.open();
   }
 
+  openGenderDialog() {
+    this.genderController = new CustomDialogController({
+      builder: GenderDialog({
+        onSelect: async (g: number) => { await UserApi.updateUserInfo({ gender: g }); }
+      }), autoCancel: true, alignment: DialogAlignment.Bottom, customStyle: true
+    });
+    this.genderController.open();
+  }
+
   openEditAvatarDialog() {
-    // 随机头像
     const nextAvatarUrl = `https://api.multiavatar.com/${Math.floor(Math.random() * 1000)}.png`;
     this.dialogController = new CustomDialogController({
       builder: InputDialog({
         title: '修改头像URL', textValue: nextAvatarUrl,
         onConfirm: async (val) => {
-          if (val.trim() !== '') {
-            // 1. 瞬间更新 UI
-            this.avatarStr = val;
-            // 2. 瞬间存入硬盘
-            LoginStateManager.updateLocalUserInfo({ image: val });
-            // 3. 发送服务器
-            UserApi.updateUserInfo({ image: val });
-          }
+          if (val.trim() !== '') await UserApi.updateUserInfo({ image: val });
         }
       }), autoCancel: true, alignment: DialogAlignment.Center, customStyle: true
     });
@@ -90,7 +129,9 @@ struct EditInfo {
             Divider().color("#f5f5f5").margin({ left: 15, right: 15 })
             this.Item("简介", false, "", undefined, "为你推荐感兴趣的内容")
             Divider().color("#f5f5f5").margin({ left: 15, right: 15 })
-            this.Item("性别", false, "女")
+            this.Item("性别", false, this.genderText, () => { this.openGenderDialog(); })
+            Divider().color("#f5f5f5").margin({ left: 15, right: 15 })
+            this.Item("收货地址", false, "", () => { this.addrController.open(); }, "管理地址")
           }.backgroundColor(Color.White).borderRadius(12).width("100%")
         }.padding(15).width("100%").layoutWeight(1).backgroundColor("#f5f5f5")
       }
