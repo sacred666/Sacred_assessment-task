@@ -49,9 +49,28 @@ export class ImageBody {
   image?: string = undefined;
 }
 
-// 【关键修复】补上这个接口导出
 export interface UploadResponse {
   code: number;
   msg: string;
-  data: string; // 这里返回的是图片 URL
+  data: string;
+}
+
+// 【核心修改】适配后端演出接口字段
+export interface ShowItem {
+  minPrice: number;
+  cover: import("d:/Deveco/DevEco Studio/sdk/default/openharmony/ets/api/global/resource").Resource;
+  name: string;
+  id?: number;
+  title?: string;     // 后端：演出名称 (周杰伦...) -> 前端映射给 introduction
+  image?: string;     // 后端：封面图 -> 前端映射给 photo
+  sortName?: string;  // 后端：分类 (演唱会) -> 前端映射给 title
+  city?: string;
+  venueName?: string;
+  hasStock?: boolean;
+}
+
+export interface ShowListResponse {
+  code: number;
+  msg: string;
+  data: ShowItem[]; // 数组结构
 }
