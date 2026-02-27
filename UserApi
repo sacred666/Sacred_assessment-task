@@ -1,5 +1,7 @@
 import http from '@ohos.net.http';
-import { LoginRequest, UserInfo, UpdateUserParams, LoginData, LogoutParams, AddAddressRequest, ImageBody, UploadResponse } from '../model/UserModel';
+import { LoginRequest, UserInfo, UpdateUserParams, LoginData, LogoutParams, AddAddressRequest, ImageBody, UploadResponse,
+  ShowItem,
+  ShowListResponse} from '../model/UserModel';
 import { LoginStateManager } from '../utils/LoginStateManager';
 import { promptAction } from '@kit.ArkUI';
 import fs from '@ohos.file.fs';
@@ -253,5 +255,28 @@ export class UserApi {
     await LoginStateManager.logout();
     promptAction.showToast({ message: '已退出登录' });
     httpRequest.destroy();
+  }
+
+
+  // 7. 获取首页演出列表
+  static async getShowList(): Promise<ShowItem[]> {
+    const httpRequest = http.createHttp();
+    try {
+      const url = `${BASE_URL}/user/show?page=1&pageSize=10&city=${encodeURIComponent('深圳市')}`;
+      const response = await httpRequest.request(url, {
+        method: http.RequestMethod.GET,
+        header: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.responseCode === 200) {
+        const resObj = JSON.parse(response.result as string) as ShowListResponse;
+        // 兼容直接返回数组的情况
+        if (resObj.code === 1 && Array.isArray(resObj.data)) {
+          return resObj.data;
+        }
+      }
+    } catch (e) {}
+    finally { httpRequest.destroy(); }
+    return [];
   }
 }
