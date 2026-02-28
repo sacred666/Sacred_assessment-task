@@ -55,22 +55,71 @@ export interface UploadResponse {
   data: string;
 }
 
-// 【核心修改】适配后端演出接口字段
+// --- 演出列表相关 ---
+
 export interface ShowItem {
-  minPrice: number;
-  cover: import("d:/Deveco/DevEco Studio/sdk/default/openharmony/ets/api/global/resource").Resource;
+  id: string;
   name: string;
-  id?: number;
-  title?: string;     // 后端：演出名称 (周杰伦...) -> 前端映射给 introduction
-  image?: string;     // 后端：封面图 -> 前端映射给 photo
-  sortName?: string;  // 后端：分类 (演唱会) -> 前端映射给 title
-  city?: string;
-  venueName?: string;
-  hasStock?: boolean;
+  categoryName?: string;
+  price?: number;
+  minPrice?: number;
+  cover?: string;
+  // 兼容不同字段名
+  title?: string;
+  image?: string;
+  sortName?: string;
 }
 
+// 【修复】定义 data 内部的对象结构
+export interface ShowListData {
+  total: number;
+  list: ShowItem[];
+}
+
+// 【修复】data 类型明确为联合类型，不再使用 unknown
 export interface ShowListResponse {
   code: number;
   msg: string;
-  data: ShowItem[]; // 数组结构
+  data: ShowListData | ShowItem[];
+}
+
+// --- 演出详情相关 ---
+
+export interface Actor {
+  id: number;
+  showId: number;
+  name: string;
+}
+
+export interface Session {
+  id: number;
+  showId: number;
+  price: number;
+  startTime: string;
+  duration?: number;
+  hasStock: boolean;
+}
+
+export interface ShowDetailData {
+  id: number;
+  title: string;
+  image: string;
+  province: string;
+  city: string;
+  district: string;
+  venueName: string;
+  detailAddress: string;
+  fullAddress: string;
+  sortId: number;
+  sortName: string;
+  actors: Actor[];
+  sessions: Session[];
+  hasStock: boolean;
+  issued: boolean;
+}
+
+export interface ShowDetailResponse {
+  code: number;
+  msg: string | null;
+  data: ShowDetailData;
 }
