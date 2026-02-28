@@ -1,431 +1,235 @@
-import { AppStorageV2 } from "@kit.ArkUI";
+import { NavUtils } from "../utils/NavUtils";
+import { UserApi } from "../api/UserApi";
+import { ShowDetailData, Session } from "../model/UserModel";
 
-// 跳转页面入口函数
-@Builder
-export function detailBuilder() {
-  detail();
-}
+@Builder export function detailBuilder() { detail(); }
 
 @Component
 struct detail {
-  @StorageLink('navStack') pathStack: NavPathStack = new NavPathStack();
-  @State isWanted: boolean = false; // 是否想看
-  @State wantCount: number = 767; // 想看人数
-  @State isCollected: boolean = false; // 是否收藏
+  @State showDetail: ShowDetailData | null = null;
+  @State minPrice: number = 0;
+  @State maxPrice: number = 0;
+  @State isCollected: boolean = false;
 
-  // 返回按钮点击事件
-  backClick() {
-    this.pathStack.pop();
+  async aboutToAppear() {
+    const data = await UserApi.getShowDetail(1); // 暂时固定 ID 1
+    if (data) {
+      this.showDetail = data;
+      // 计算价格区间
+      if (data.sessions && data.sessions.length > 0) {
+        let min = Number.MAX_VALUE;
+        let max = 0;
+        data.sessions.forEach((s: Session) => {
+          if (s.price < min) min = s.price;
+          if (s.price > max) max = s.price;
+        });
+        if (min === Number.MAX_VALUE) min = 0;
+        this.minPrice = min;
+        this.maxPrice = max;
+      }
+    }
   }
 
-  // 转发按钮点击事件
-  shareClick() {
-    console.log("点击转发");
-    // TODO: 实现转发逻辑
-  }
-
-  // 收藏按钮点击事件
-  collectClick() {
-    this.isCollected = !this.isCollected;
-    console.log("收藏状态:", this.isCollected ? "已收藏" : "未收藏");
-    // TODO: 实现收藏逻辑
+  // 辅助函数：根据开票状态返回颜色
+  getStatusColor(): string {
+    if (!this.showDetail) return '#CCC';
+    if (!this.showDetail.issued) return '#00BFA5'; // 待开票：青色
+    if (!this.showDetail.hasStock) return '#999999'; // 缺货：灰色
+    return '#FF6600'; // 正常：橙色
   }
 
   build() {
     NavDestination() {
-      // 使用Stack布局实现固定顶部和底部导航栏
       Stack({ alignContent: Alignment.BottomStart }) {
-        // ============ 主内容区域（可滚动） ============
+        // --- 1. 中间内容层 (可滑动) ---
         Scroll() {
           Column({ space: 0 }) {
-            // 减少顶部导航栏的留白空间
-            Column()
-              .height(8) // 减小顶部导航栏留白高度
-              .width('100%')
+            // 顶栏占位
+            Column().height(50).width('100%')
 
-            // ============ 演唱会信息卡片 ============
-            Column({ space: 3 }) { // 减少卡片内部间距
-              // 演唱会标题
-              Text('演唱会')
-                .fontSize(16)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#000000')
-                .width('100%')
-                .textAlign(TextAlign.Start)
+            if (this.showDetail) {
+              // === 演出信息卡片 ===
+              Column({ space: 8 }) {
+                // 【UI设计】标签栏：分类 + 状态
+                Row({ space: 8 }) {
+                  Text(this.showDetail.sortName || '演唱会')
+                    .fontSize(14).fontWeight(FontWeight.Bold).fontColor('#333')
+                    .padding({left: 6, right: 6, top: 2, bottom: 2})
+                    .backgroundColor('#F5F5F5').borderRadius(4)
 
-              // 演唱会名称 - 确保完整显示
-              Text('【深圳】《声声不息·宝岛季-华语流行金曲》')
-                .fontSize(15)
-                .fontWeight(FontWeight.Medium)
-                .fontColor('#000000')
-                .lineHeight(20)
-                .width('100%')
-                .textAlign(TextAlign.Start)
-                .margin({ bottom: 6 }) // 减小底部间距
+                  // 根据 issued 显示不同标签
+                  Text(this.showDetail.issued ? "售票中" : "待开票")
+                    .fontSize(10).fontColor('#FFF').fontWeight(FontWeight.Bold)
+                    .padding({left: 6, right: 6, top: 3, bottom: 3})
+                    .backgroundColor(this.getStatusColor()) // 动态颜色
+                    .borderRadius(4)
+                }.width('100%')
 
-              // 价格信息
-              Row({ space: 12 }) {
-                // 左侧海报
-                Image($r('app.media.cover'))
-                  .width(80)
-                  .height(110)
-                  .borderRadius(6)
-                  .objectFit(ImageFit.Cover)
+                // 标题
+                Text(`【${this.showDetail.city}】${this.showDetail.title}`)
+                  .fontSize(18).fontWeight(FontWeight.Bold).lineHeight(24).fontColor('#000')
 
-                // 右侧价格信息
-                Column({ space: 4 }) { // 减少间距
-                  Text('¥100-480')
-                    .fontSize(20)
-                    .fontWeight(FontWeight.Bold)
-                    .fontColor('#FF6600')
-                    .width('100%')
-                    .textAlign(TextAlign.Start)
+                // 海报 + 价格
+                Row({ space: 12 }) {
+                  Image(this.showDetail.image)
+                    .width(100).height(135).borderRadius(8)
+                    .objectFit(ImageFit.Cover).backgroundColor('#f0f0f0')
 
-                  Text('480票档 | 1张7.5折')
-                    .fontSize(12)
-                    .fontColor('#999999')
-                    .width('100%')
-                    .textAlign(TextAlign.Start)
+                  Column({ space: 8 }) {
+                    // 价格颜色也跟随状态变灰或变红
+                    Text(`¥${this.minPrice}-${this.maxPrice}`)
+                      .fontSize(22).fontWeight(FontWeight.Bold)
+                      .fontColor(this.showDetail.hasStock ? '#FF6600' : '#999')
+
+                    Text('支持电子票 | 可选座 | 售票中')
+                      .fontSize(12).fontColor('#666')
+                  }
+                  .alignItems(HorizontalAlign.Start)
+                  .justifyContent(FlexAlign.Center)
+                  .height(135)
+                }.width('100%').margin({ top: 10 })
+
+                Divider().color('#f0f0f0').margin({ top: 10, bottom: 10 })
+
+                // 时间地点
+                Column({ space: 6 }) {
+                  // 时间
+                  Row({ space: 8 }) {
+                    Text("时间").fontSize(12).fontColor('#999').width(30)
+                    if (this.showDetail.sessions.length > 0) {
+                      Text(this.showDetail.sessions[0].startTime).fontSize(14).fontColor('#333')
+                    }
+                  }
+                  // 场馆
+                  Row({ space: 8 }) {
+                    Text("场馆").fontSize(12).fontColor('#999').width(30)
+                    Column({ space: 2 }) {
+                      Text(`${this.showDetail.city} | ${this.showDetail.venueName}`).fontSize(14).fontColor('#333')
+                      Text(this.showDetail.fullAddress).fontSize(12).fontColor('#999').maxLines(1).textOverflow({overflow:TextOverflow.Ellipsis})
+                    }.alignItems(HorizontalAlign.Start)
+                  }
                 }
-                .width('100%')
               }
-              .width('100%')
+              .padding(15).backgroundColor('#FFF').borderRadius(12)
+              .margin({ left: 12, right: 12, top: 10 })
 
-              // 时间信息
-              Column({ space: 2 }) { // 减少间距
-                Text('2026.03.28 周六 20:00')
-                  .fontSize(13)
-                  .fontColor('#333333')
-                  .width('100%')
-                  .textAlign(TextAlign.Start)
+              // === 票档信息 (竖直瀑布流) ===
+              Column({ space: 12 }) {
+                Text('场次与票档').fontSize(16).fontWeight(FontWeight.Bold).margin({ left: 4 })
 
-                Text('120分钟，无中场')
-                  .fontSize(12)
-                  .fontColor('#999999')
-                  .width('100%')
-                  .textAlign(TextAlign.Start)
+                ForEach(this.showDetail.sessions, (session: Session) => {
+                  Row() {
+                    Column({ space: 4 }) {
+                      // 票价
+                      Text(`¥${session.price}`).fontSize(18).fontWeight(FontWeight.Bold)
+                        .fontColor(session.hasStock ? '#333' : '#CCC')
+                      // 时间
+                      Text(session.startTime).fontSize(12).fontColor('#999')
+                    }.alignItems(HorizontalAlign.Start).layoutWeight(1)
+
+                    // 右侧状态按钮
+                    if (!this.showDetail?.issued) {
+                      // 未开票状态
+                      Text("提醒我")
+                        .fontSize(13).fontColor('#00BFA5')
+                        .padding({left: 12, right: 12, top: 6, bottom: 6})
+                        .backgroundColor('#E0F2F1').borderRadius(16)
+                    } else if (!session.hasStock) {
+                      // 缺货状态
+                      Text("缺货登记")
+                        .fontSize(13).fontColor('#999')
+                        .padding({left: 12, right: 12, top: 6, bottom: 6})
+                        .backgroundColor('#F5F5F5').borderRadius(16)
+                    } else {
+                      // 正常购买
+                      Text("预订")
+                        .fontSize(13).fontColor('#FF6600')
+                        .padding({left: 15, right: 15, top: 6, bottom: 6})
+                        .backgroundColor('#FFF0E6').borderRadius(16)
+                        .border({width: 1, color: '#FF6600'})
+                    }
+                  }
+                  .width('100%').padding(15)
+                  .backgroundColor('#FFF')
+                  .borderRadius(12)
+                })
               }
-              .margin({ top: 6 }) // 减小顶部间距
+              .margin({ left: 12, right: 12, top: 15 })
 
-              // 分隔线
-              Divider()
-                .strokeWidth(1)
-                .color('#F0F0F0')
-                .width('100%')
-                .margin({ top: 8, bottom: 8 }) // 减小上下间距
-
-              // 地点信息
-              Column({ space: 4 }) { // 减少间距
-                Row({ space: 0 }) {
-                  Text('深圳市 · 龙岗国际艺术中心--歌剧厅')
-                    .fontSize(13)
-                    .fontWeight(FontWeight.Medium)
-                    .fontColor('#333333')
-                    .width('100%')
-                    .textAlign(TextAlign.Start)
-                }
-
-                Row({ space: 0 }) {
-                  Text('坂田街道坂田社区贝尔路4号 · 8个演出 >')
-                    .fontSize(12)
-                    .fontColor('#666666')
-
-                  Blank()
-
-                  Text('500.5km')
-                    .fontSize(12)
-                    .fontColor('#999999')
-                }
-                .width('100%')
+              // === 详情介绍 ===
+              Column({ space: 10 }) {
+                Text('演出详情').fontSize(16).fontWeight(FontWeight.Bold)
+                Text(this.showDetail.title + "\n\n(此处展示富文本详情...)\n\n" + this.showDetail.detailAddress)
+                  .fontSize(14).fontColor('#666').lineHeight(24)
               }
+              .padding(15).backgroundColor('#FFF').borderRadius(12)
+              .margin({ left: 12, right: 12, top: 15, bottom: 100 }) // 底部留白
+
+            } else {
+              // Loading 状态
+              Column() { Text("正在加载演出信息...").fontColor("#999") }
+              .width('100%').height(300).justifyContent(FlexAlign.Center)
             }
-            .padding(12) // 减小内边距
-            .backgroundColor('#FFFFFF')
-            .borderRadius(12)
-            .margin({ left: 12, right: 12, top: 4 }) // 减小顶部外边距
-
-            // 间距
-            Column()
-              .height(8) // 减小间距
-              .backgroundColor('#F5F5F5')
-
-            // ============ 抢票攻略卡片 ============
-            Column({ space: 8 }) { // 减少间距
-              // 标题
-              Text('抢票攻略')
-                .fontSize(16)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#000000')
-                .width('100%')
-                .textAlign(TextAlign.Start)
-
-              // 描述
-              Text('设置本次抢票信息，抢票快人一步！')
-                .fontSize(14)
-                .fontColor('#666666')
-                .width('100%')
-                .textAlign(TextAlign.Start)
-                .margin({ top: 2 }) // 减小顶部间距
-            }
-            .padding(12) // 减小内边距
-            .backgroundColor('#FFFFFF')
-            .borderRadius(12)
-            .margin({ left: 12, right: 12 })
-
-            // 间距
-            Column()
-              .height(8) // 减小间距
-              .backgroundColor('#F5F5F5')
-
-            // ============ 去设置按钮卡片 ============
-            Button('去设置', { type: ButtonType.Normal })
-              .width('100%')
-              .height(44) // 减小高度
-              .backgroundColor('#FFF0E6')
-              .fontColor('#FF6600')
-              .fontSize(16)
-              .fontWeight(FontWeight.Medium)
-              .borderRadius(8)
-              .stateEffect(true)
-              .onClick(() => {
-                console.log("去设置抢票攻略");
-              })
-              .margin({ left: 12, right: 12 })
-
-            // 间距
-            Column()
-              .height(8) // 减小间距
-              .backgroundColor('#F5F5F5')
-
-            // ============ 大麦想看卡片 ============
-            Column({ space: 8 }) { // 减少间距
-              // 标题
-              Text('大麦想看')
-                .fontSize(16)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#000000')
-                .width('100%')
-                .textAlign(TextAlign.Start)
-
-              Row({ space: 16 }) { // 减少间距
-                // 想看人数（大数字）
-                Column({ space: 2 }) {
-                  Text(this.wantCount.toString())
-                    .fontSize(32) // 减小字体
-                    .fontColor('#FF6600')
-                    .fontWeight(FontWeight.Bold)
-
-                  Text('人想看')
-                    .fontSize(14)
-                    .fontColor('#999999')
-                }
-
-                Blank()
-
-                // 点击查看按钮
-                Button('点击查看')
-                  .width(90) // 减小宽度
-                  .height(40) // 减小高度
-                  .backgroundColor('#FF6600')
-                  .fontColor('#FFFFFF')
-                  .fontSize(14)
-                  .fontWeight(FontWeight.Medium)
-                  .borderRadius(8)
-                  .stateEffect(true)
-                  .onClick(() => {
-                    console.log("点击查看详情");
-                  })
-              }
-              .width('100%')
-              .margin({ top: 6 }) // 减小顶部间距
-            }
-            .padding(12) // 减小内边距
-            .backgroundColor('#FFFFFF')
-            .borderRadius(12)
-            .margin({ left: 12, right: 12 })
-
-            // 间距
-            Column()
-              .height(8) // 减小间距
-              .backgroundColor('#F5F5F5')
-
-            // ============ 演出介绍卡片 ============
-            Column({ space: 8 }) { // 减少间距
-              // 标题
-              Text('演出介绍')
-                .fontSize(16)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#000000')
-                .width('100%')
-                .textAlign(TextAlign.Start)
-
-              // 演出介绍内容
-              Column({ space: 6 }) { // 减少间距
-                Text('声声不息')
-                  .fontSize(16) // 减小字体
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor('#333333')
-                  .width('100%')
-                  .textAlign(TextAlign.Center)
-
-                Text('宝岛季')
-                  .fontSize(14) // 减小字体
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor('#666666')
-                  .width('100%')
-                  .textAlign(TextAlign.Center)
-              }
-              .margin({ top: 6 }) // 减小顶部间距
-              .padding(16) // 减小内边距
-              .backgroundColor('#F5F5F5')
-              .borderRadius(8)
-            }
-            .padding(12) // 减小内边距
-            .backgroundColor('#FFFFFF')
-            .borderRadius(12)
-            .margin({ left: 12, right: 12, bottom: 80 }) // 为底部导航栏留出足够空间
           }
           .width('100%')
-          .backgroundColor('#F5F5F5')
         }
         .scrollable(ScrollDirection.Vertical)
         .scrollBar(BarState.Off)
-        .width('100%')
-        .height('100%')
-        .margin({ top: 48 }) // 调整为与留白一致的高度
+        .edgeEffect(EdgeEffect.Spring)
+        .width('100%').height('100%')
 
-        // ============ 顶部固定导航栏（始终在最上方） ============
-        Row({ space: 0 }) {
-          // 返回按钮
-          Column() {
-            Image($r('app.media.back'))
-              .width(20) // 减小图标
-              .height(20)
-          }
-          .width(40) // 减小宽度
-          .height(40) // 减小高度
-          .justifyContent(FlexAlign.Center)
-          .alignItems(HorizontalAlign.Center)
-          .onClick(() => {
-            this.backClick();
-          })
-
-          // 空白区域
+        // --- 2. 顶部悬浮栏 (返回/收藏) ---
+        Row() {
+          Image($r('app.media.back')).width(24).height(24).onClick(() => NavUtils.pop())
           Blank()
-
-          // 右侧按钮区域
-          Row({ space: 8 }) {
-            // 转发按钮
-            Column() {
-              Image($r('app.media.zhuanfa'))
-                .width(18) // 减小图标
-                .height(18)
-            }
-            .width(36) // 减小宽度
-            .height(36) // 减小高度
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
-            .onClick(() => {
-              this.shareClick();
-            })
-
-            // 收藏按钮
-            Column() {
-              Image($r('app.media.shoucang'))
-                .width(18) // 减小图标
-                .height(18)
-                .fillColor(this.isCollected ? '#FF6600' : '#666666')
-            }
-            .width(36) // 减小宽度
-            .height(36) // 减小高度
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
-            .onClick(() => {
-              this.collectClick();
-            })
-          }
-          .margin({ right: 8 })
+          Image($r('app.media.shoucang')).width(24).height(24)
+            .fillColor(this.isCollected ? '#FF6600' : '#666')
+            .margin({right: 15})
+            .onClick(() => this.isCollected = !this.isCollected)
+          Image($r("app.media.zhuanfa")).width(24).height(24)
         }
-        .width('100%')
-        .height(48) // 减小高度
-        .padding({ left: 8, right: 8 })
-        .backgroundColor('#FFFFFF')
-        .shadow({ radius: 2, color: '#1A000000', offsetX: 0, offsetY: 1 })
-        .position({ x: 0, y: 0 })
-        .zIndex(10)
+        .width('100%').height(50).padding({ left: 15, right: 15 })
+        // 背景设为白色半透明，防止遮挡文字看不清
+        .backgroundColor('rgba(255,255,255,0.9)')
+        .position({ x: 0, y: 0 }).zIndex(100)
 
-        // ============ 底部固定导航栏（紧贴屏幕底部） ============
-        Row({ space: 10 }) { // 减少间距
-          // 左边两个小按钮
-          Row({ space: 12 }) { // 减少间距
-            Column({ space: 2 }) { // 减少间距
-              Image($r('app.media.kefu'))
-                .width(18) // 减小图标
-                .height(18)
-              Text('帮助')
-                .fontSize(10)
-                .fontColor('#666666')
-            }
-            .onClick(() => {
-              console.log("点击帮助");
-            })
+        // --- 3. 底部固定购买栏 ---
+        Row({ space: 15 }) {
+          Column() { Image($r('app.media.kefu')).width(22).height(22); Text('客服').fontSize(10).fontColor('#666').margin({top:2}) }
+          Column() { Image($r('app.media.xiangkan')).width(22).height(22); Text('想看').fontSize(10).fontColor('#666').margin({top:2}) }
 
-            Column({ space: 2 }) { // 减少间距
-              Image($r('app.media.xiangkan'))
-                .width(18) // 减小图标
-                .height(18)
-                .fillColor(this.isWanted ? '#FF6600' : '#666666')
-                Text("想看")
-                .fontSize(10)
-                .fontColor('#666666')
-            }
-
-            .onClick(() => {
-              this.isWanted = !this.isWanted;
-              this.wantCount = this.isWanted ? this.wantCount + 1 : this.wantCount - 1;
-
-            })
-          }
-
-          // 右侧大橙色按钮
+          // 【核心】根据 issued 状态变化的按钮
           Button() {
-            Column({ space: 1 }) { // 减少间距
-              Text('特惠选座')
-                .fontSize(16)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#FFFFFF')
-
-              Text('最低 ¥100起')
-                .fontSize(12)
-                .fontColor('#FFFFFF')
-                .opacity(0.9)
+            if (this.showDetail) {
+              if (!this.showDetail.issued) {
+                // 未开票
+                Text('开售提醒').fontSize(16).fontColor('#FFF').fontWeight(FontWeight.Bold)
+              } else if (!this.showDetail.hasStock) {
+                // 缺货
+                Text('缺货登记').fontSize(16).fontColor('#FFF').fontWeight(FontWeight.Bold)
+              } else {
+                // 正常
+                Column() {
+                  Text('特惠选座').fontSize(16).fontColor('#FFF').fontWeight(FontWeight.Bold)
+                  Text(`¥${this.minPrice}起`).fontSize(11).fontColor('#FFF').opacity(0.9)
+                }
+              }
+            } else {
+              Text('加载中...').fontColor('#FFF')
             }
           }
-          .layoutWeight(1)
-          .height(48) // 减小高度
-          .borderRadius(10) // 减小圆角
-          .backgroundColor('#FF6600')
-          .stateEffect(true)
-          .onClick(() => {
-            console.log("特惠选座");
-            // TODO: 跳转选座逻辑
-          })
+          .layoutWeight(1).height(46)
+          // 动态背景色：未开票(青色) / 缺货(灰色) / 正常(橙色)
+          .backgroundColor(this.getStatusColor())
         }
-        .width('100%')
-        .height(52) // 稍微增加高度以覆盖边界
-        .padding({ left: 12, right: 12, bottom: 0, top: 8 }) // 底部padding设为0
-        .backgroundColor('#FFFFFF')
-        .shadow({ radius: 8, color: '#1A000000', offsetX: 0, offsetY: -3 }) // 增加阴影以遮盖边界
-        .align(Alignment.Bottom) // 使用对齐方式固定到底部
-        .zIndex(10)
+        .width('100%').height(65)
+        .padding({ left: 15, right: 15, top: 8, bottom: 12 }) // 适配底部安全区
+        .backgroundColor('#FFF')
+        .shadow({ radius: 10, color: '#1A000000', offsetY: -2 })
+        .align(Alignment.Bottom).zIndex(100)
       }
-      .width('100%')
-      .height('100%')
-      .backgroundColor('#F5F5F5')
+      .width('100%').height('100%').backgroundColor('#F5F5F5')
     }
     .hideTitleBar(true)
-    .onReady((context: NavDestinationContext) => {
-      this.pathStack = context.pathStack;
-    })
   }
 }
