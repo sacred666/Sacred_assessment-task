@@ -8,7 +8,6 @@ interface HomePageClass { text: string; icon: ResourceStr }
 
 @Component
 export struct HomePage {
-  // 静态数据保持原样
   HomePageData1: Array<HomePageClass> = [
     { text: '音乐节', icon: $r('app.media.musicparty') }, { text: 'Livehouse', icon: $r('app.media.2') }, { text: '舞蹈舞剧', icon: $r('app.media.dance') }, { text: '脱口秀', icon: $r('app.media.show') }, { text: '相声曲艺', icon: $r('app.media.3') },
   ]
@@ -19,13 +18,12 @@ export struct HomePage {
     { text: '演出日历', icon: $r('app.media.canlender') }, { text: '大麦榜单', icon: $r('app.media.movie') }, { text: '团购券', icon: $r('app.media.rank') }, { text: '周边商城', icon: $r('app.media.market') }, { text: '全部', icon: $r('app.media.all') },
   ]
 
-  // @State 确保 UI 刷新
   @State showdata: Array<Show> = [
     { title: '话剧', introduction: "中国国家话剧院演出", photo: $r('app.media.red'), price: 50 },
     { title: '演唱会', introduction: "马建涛巡回演唱会", photo: $r('app.media.majiaotao'), price: 199 },
     { title: '演唱会', introduction: "2025毕雯珺'毕达之地'", photo: $r('app.media.bi'), price: 380 },
     { title: '音乐节', introduction: "北京欢乐谷惊奇潮玩节", photo: $r('app.media.ad1'), price: 299 },
-    { title: '演唱会', introduction: "声声不息演唱会", photo: $r('app.media.SSBX'), price: 99 }, // 索引4，待替换
+    { title: '演唱会', introduction: "声声不息演唱会", photo: $r('app.media.SSBX'), price: 99 },
   ]
 
   swiperList: Array<Swiper> = [
@@ -33,26 +31,17 @@ export struct HomePage {
   ]
 
   async aboutToAppear() {
-    // 1. 获取后端数据
     const list = await UserApi.getShowList();
-
     if (list && list.length > 0) {
-      // 取第一条数据 (比如周杰伦)
       const remoteItem = list[0];
 
-      // 2. 替换数组第5个元素，映射字段
       this.showdata.splice(4, 1, {
-        // 后端 sortName (演唱会) -> 前端 title (左上角标签)
         title: remoteItem.sortName ?? "演唱会",
-
-        // 后端 title (周杰伦...) -> 前端 introduction (大标题)
-        introduction: remoteItem.title ?? (remoteItem.name ?? "未知演出"),
-
-        // 后端 image -> 前端 photo (支持网络URL)
+        introduction: remoteItem.title ?? (remoteItem.name ?? "未知"),
         photo: remoteItem.image ?? (remoteItem.cover ?? $r('app.media.SSBX')),
 
-        // 后端没给 price，保留 99
-        price: remoteItem.minPrice ?? 99
+        // 【核心修复】这里优先读取 price 字段
+        price: remoteItem.price ?? (remoteItem.minPrice ?? 99)
       });
     }
   }
@@ -60,7 +49,6 @@ export struct HomePage {
   build() {
     Scroll() {
       Column(){
-        // 1. 顶部搜索栏
         Row() {
           Image($r("app.media.ai")).width(28).height(28).margin({ right: 8 }).fillColor("#f55300")
           Row() {
@@ -78,35 +66,24 @@ export struct HomePage {
         .padding({left: 10, right: 10, top: 10, bottom: 10})
 
         Column() {
-          // 2. 图标区域
-          Row() { ForEach(this.HomePageData1, (item: HomePageClass) => { Column() { Image(item.icon).width(35).height(35).fillColor(Color.Orange); Text(item.text).height(30).fontSize(12).fontWeight(FontWeight.Bold).textAlign(TextAlign.Center).width('auto') }.width(60).margin({ right: 10 }) }) }.justifyContent(FlexAlign.SpaceEvenly).width("100%").height(80)
-          Row() { ForEach(this.HomePageData2, (item: HomePageClass) => { Column() { Image(item.icon).width(35).height(35).fillColor(Color.Orange); Text(item.text).height(30).fontSize(12).fontWeight(FontWeight.Bold).textAlign(TextAlign.Center).width('auto') }.width(60).margin({ right: 10 }) }) }.justifyContent(FlexAlign.SpaceEvenly).width("100%").height(80)
-          Row() { ForEach(this.HomePageData3, (item: HomePageClass) => { Column() { Image(item.icon).width(35).height(35).fillColor(Color.Orange); Text(item.text).height(30).fontSize(12).fontWeight(FontWeight.Bold).textAlign(TextAlign.Center).width('auto') }.margin({ right: 10 }).width(60) }) }.justifyContent(FlexAlign.SpaceEvenly).width("100%").height(80)
+          this.IconRow(this.HomePageData1)
+          this.IconRow(this.HomePageData2)
+          this.IconRow(this.HomePageData3)
 
-          // 3. 抢票区域
           Row() {
             Column() {
               Row() { Text("抢票播报站").fontSize(16).fontWeight(FontWeight.Bold).margin({ right: 8 }); Text("张学友广州").fontSize(12).fontColor('#666').margin({ right: 5 }); Image($r('app.media.right')).width(16).height(16).fillColor(Color.White).padding(3).backgroundColor(Color.Black).border({ radius: 5 }) }.width('100%').margin({ bottom: 9 })
-              Row() {
-                Image($r('app.media.lu')).width(35).height(55).borderRadius(4).margin({ right: 6 })
-                Column() { Row() { Text("鹭卓 2025 Ready").fontSize(14).fontWeight(FontWeight.Bold).maxLines(2) }.margin({ bottom: 10 }); Row() { Text("01:19:55").fontSize(12).fontColor('#333').fontWeight(FontWeight.Bold).padding({ top: 5, bottom: 5, left: 3 }).margin({ right: 18 }); Button("抢").fontSize(12).fontColor(Color.White).backgroundColor('#FF6600').width(45).height(22) }.backgroundColor(Color.Pink).border({ radius: 10 }) }
-              }.width('100%')
+              Row() { Image($r('app.media.lu')).width(35).height(55).borderRadius(4).margin({ right: 6 }); Column() { Row() { Text("鹭卓 2025 Ready").fontSize(14).fontWeight(FontWeight.Bold).maxLines(2) }.margin({ bottom: 10 }); Row() { Text("01:19:55").fontSize(12).fontColor('#333').fontWeight(FontWeight.Bold).padding({ top: 5, bottom: 5, left: 3 }).margin({ right: 18 }); Button("抢").fontSize(12).fontColor(Color.White).backgroundColor('#FF6600').width(45).height(22) }.backgroundColor(Color.Pink).border({ radius: 10 }) } }.width('100%')
             }.alignItems(HorizontalAlign.Start).width('45%').padding({ left: 8, right: 8, top: 6, bottom: 6 }).backgroundColor('#FFF8F2').borderRadius(8).margin({ right: 25 })
-
             Column() {
               Row() { Text("新人见面礼").fontSize(16).fontWeight(FontWeight.Bold).fontColor(Color.Orange).layoutWeight(1); Image($r('app.media.right')).padding(3).width(16).height(16).fillColor(Color.White).backgroundColor(Color.Black).border({ radius: 5 }) }.width('100%').margin({ bottom: 9 })
-              Row() {
-                Image($r('app.media.discount')).width(35).height(55).borderRadius(4).margin({ right: 6 })
-                Column() { Text("电影演出券包").fontSize(14).fontWeight(FontWeight.Bold).margin({ bottom: 4 }); Text("新人专享").fontSize(11).margin({ bottom: 4 }); Row() { Text("去领取").fontSize(12).fontColor('#f05615').fontWeight(FontWeight.Bold).padding({ top: 3, bottom: 3, left: 35, right: 35 }) }.backgroundColor(Color.Pink).border({ radius: 10 }) }.alignItems(HorizontalAlign.Start)
-              }.width('100%')
+              Row() { Image($r('app.media.discount')).width(35).height(55).borderRadius(4).margin({ right: 6 }); Column() { Text("电影演出券包").fontSize(14).fontWeight(FontWeight.Bold).margin({ bottom: 4 }); Text("新人专享").fontSize(11).margin({ bottom: 4 }); Row() { Text("去领取").fontSize(12).fontColor('#f05615').fontWeight(FontWeight.Bold).padding({ top: 3, bottom: 3, left: 35, right: 35 }) }.backgroundColor(Color.Pink).border({ radius: 10 }) }.alignItems(HorizontalAlign.Start) }.width('100%')
             }.alignItems(HorizontalAlign.Start).width('45%').padding({ left: 8, right: 8, top: 6, bottom: 6 }).backgroundColor('#FFF8F2').borderRadius(8)
           }.margin({ bottom: 10 })
 
-          // 4. 轮播图
           Swiper() { ForEach(this.swiperList, (item: Swiper) => { Image(item.icon).border({ radius: 10 }).width("100%").height("100%") }) }
           .width("100%").autoPlay(true).height(50).margin({ bottom: 20 }).height(200)
 
-          // 5. 必看演出列表
           Row() { Text("必看演出").fontSize(20).fontWeight(FontWeight.Bold).layoutWeight(1); Text("全部").fontSize(14); Image($r('app.media.rights')).width(12) }.width("100%").padding({ right:15}).margin({bottom:10})
 
           List() {
@@ -114,7 +91,6 @@ export struct HomePage {
               ListItem() {
                 Column() {
                   Stack() {
-                    // 支持网络 URL 或本地资源
                     Image(item.photo).width("100%").height(100).border({ radius: 10 })
                     Text(item.title).padding({ left: 2, right: 2, top: 3, bottom: 3 }).textAlign(TextAlign.Center).border({ radius: 5 }).fontSize(10).backgroundColor(Color.Black).fontColor(Color.White).fontWeight(FontWeight.Bold).margin({ left: 5, top: 3 })
                   }
@@ -132,5 +108,9 @@ export struct HomePage {
       }
     }
     .width('100%').height('100%').backgroundColor(Color.Transparent).scrollBar(BarState.Off).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+  }
+
+  @Builder IconRow(data: HomePageClass[]) {
+    Row() { ForEach(data, (item: HomePageClass) => { Column() { Image(item.icon).width(35).height(35).fillColor(Color.Orange); Text(item.text).height(30).fontSize(12).fontWeight(FontWeight.Bold).textAlign(TextAlign.Center).width('auto') }.width(60).margin({ right: 10 }) }) }.justifyContent(FlexAlign.SpaceEvenly).width("100%").height(80)
   }
 }
