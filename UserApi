@@ -1,7 +1,9 @@
 import http from '@ohos.net.http';
 import { LoginRequest, UserInfo, UpdateUserParams, LoginData, LogoutParams, AddAddressRequest, ImageBody, UploadResponse,
   ShowItem,
-  ShowListResponse} from '../model/UserModel';
+  ShowListResponse,
+  ShowDetailResponse,
+  ShowDetailData} from '../model/UserModel';
 import { LoginStateManager } from '../utils/LoginStateManager';
 import { promptAction } from '@kit.ArkUI';
 import fs from '@ohos.file.fs';
@@ -37,7 +39,6 @@ interface ResponseWrapper {
 }
 
 export class UserApi {
-
   // 1. 登录
   static async login(params: LoginRequest): Promise<boolean> {
     const httpRequest = http.createHttp();
@@ -118,7 +119,10 @@ export class UserApi {
           await LoginStateManager.saveUserInfo(info);
         }
       }
-    } catch (e) {} finally { httpRequest.destroy(); }
+    } catch (e) {
+    } finally {
+      httpRequest.destroy();
+    }
   }
 
   // 3. 【双重保险】修改用户信息
@@ -148,8 +152,8 @@ export class UserApi {
     // 这样无论后端读哪里，都能读到数据
     let bodyData: Record<string, Object> = {};
 
-    if (params.image !== undefined) bodyData['image'] = params.image;
-    else if (params.avatar !== undefined) bodyData['image'] = params.avatar;
+    if (params.image !== undefined) bodyData['image'] = params.image; else if (params.avatar !==
+      undefined) bodyData['image'] = params.avatar;
 
     if (params.name !== undefined) bodyData['name'] = params.name;
     if (params.gender !== undefined) bodyData['gender'] = params.gender;
@@ -174,7 +178,11 @@ export class UserApi {
         return true;
       }
       return false;
-    } catch (e) { return false; } finally { httpRequest.destroy(); }
+    } catch (e) {
+      return false;
+    } finally {
+      httpRequest.destroy();
+    }
   }
 
   // 4. 上传图片
@@ -188,7 +196,8 @@ export class UserApi {
       fs.closeSync(file);
 
       const boundary = '----WebKitFormBoundary' + new Date().getTime();
-      const head = `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="avatar.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`;
+      const head =
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="avatar.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`;
       const tail = `\r\n--${boundary}--\r\n`;
 
       const textEncoder = new util.TextEncoder();
@@ -215,7 +224,9 @@ export class UserApi {
       return '';
     } catch (e) {
       return '';
-    } finally { httpRequest.destroy(); }
+    } finally {
+      httpRequest.destroy();
+    }
   }
 
   // 5. 添加地址
@@ -234,7 +245,11 @@ export class UserApi {
         return true;
       }
       return false;
-    } catch (e) { return false; } finally { httpRequest.destroy(); }
+    } catch (e) {
+      return false;
+    } finally {
+      httpRequest.destroy();
+    }
   }
 
   // 6. 退出登录
@@ -250,7 +265,8 @@ export class UserApi {
           header: { 'Content-Type': 'application/json', 'token': token },
           extraData: logoutBody
         });
-      } catch (e) {}
+      } catch (e) {
+      }
     }
     await LoginStateManager.logout();
     promptAction.showToast({ message: '已退出登录' });
@@ -275,8 +291,30 @@ export class UserApi {
           return resObj.data;
         }
       }
-    } catch (e) {}
-    finally { httpRequest.destroy(); }
+    } catch (e) {
+    } finally {
+      httpRequest.destroy();
+    }
     return [];
+  }
+
+  // 8. 获取详情
+  static async getShowDetail(id: number): Promise<ShowDetailData | null> {
+    const httpRequest = http.createHttp();
+    const token = await LoginStateManager.getToken();
+    try {
+      const url = `${BASE_URL}/user/show/detail?id=${id}`;
+      const header: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) header['token'] = token;
+
+      const response = await httpRequest.request(url, { method: http.RequestMethod.GET, header: header });
+      if (response.responseCode === 200) {
+        const resObj = JSON.parse(response.result as string) as ShowDetailResponse;
+        if (resObj.code === 1 && resObj.data) {
+          return resObj.data;
+        }
+      }
+    } catch (e) {} finally { httpRequest.destroy(); }
+    return null;
   }
 }
