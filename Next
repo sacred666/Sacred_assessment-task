@@ -1,0 +1,271 @@
+import { NavUtils } from "../utils/NavUtils";
+import { UserApi } from "../api/UserApi";
+import { OrderItem } from "../model/UserModel";
+
+// 顶部类别数据接口
+interface CategoryData {
+  text: string;
+}
+
+@Builder
+export function NextBuilder() {
+  Next();
+}
+
+interface GeneratedTypeLiteralInterface_1 {
+  name: string;
+  status: number;
+}
+
+@Component
+struct Next {
+  pathStack: NavPathStack = NavUtils.stack;
+
+  // --- 状态变量 ---
+  @State topCurrentIndex: number = 0;
+  @State statusIndex: number = 0;
+
+  @State orderList: OrderItem[] = [];
+  @State page: number = 1;
+  @State isLoading: boolean = false;
+  @State isEnd: boolean = false;
+
+  // 顶部水平分类数据
+  private topDatas: CategoryData[] = [
+    { text: "演出/门票" }, { text: "团购券" }, { text: "电影" },
+    { text: "小食" }, { text: "商城" }, { text: "剧本杀" }
+  ];
+
+  // 状态栏数据 (对应后端 orderStatus, -1代表全部)
+  // 假设: 0=待付款
+  private statusTabs: Array<GeneratedTypeLiteralInterface_1> = [
+    { name: "全部", status: -1 },
+    { name: "待付款", status: 0 },
+    { name: "待收货", status: 1 },
+    { name: "待评价", status: 2 }
+  ];
+
+  aboutToAppear() {
+    // 页面加载时请求第一页数据
+    this.refreshData();
+  }
+
+  // 刷新数据
+  async refreshData() {
+    this.page = 1;
+    this.isEnd = false;
+    this.orderList = [];
+    await this.loadMoreData();
+  }
+
+  // 加载更多
+  async loadMoreData() {
+    if (this.isLoading || this.isEnd) return;
+    this.isLoading = true;
+
+    const currentStatus = this.statusTabs[this.statusIndex].status;
+    // 请求 5 条数据，如您 curl 所示
+    const newData = await UserApi.getOrderList(this.page, 5, currentStatus);
+
+    if (newData && newData.length > 0) {
+      this.orderList = this.orderList.concat(newData);
+      this.page++;
+    } else {
+      this.isEnd = true;
+    }
+    this.isLoading = false;
+  }
+
+  // 状态文案映射
+  getStatusText(status: number): string {
+    if (status === 0) return "待付款";
+    if (status === 1) return "待收货";
+    if (status === 2) return "待评价";
+    if (status === 3) return "已完成";
+    return ""; // 其他状态不显示或显示未知
+  }
+
+  // 顶部水平分类 Builder
+  @Builder topCategoryBuilder(item: CategoryData, index: number) {
+    Column({ space: 5 }) {
+      Text(item.text)
+        .fontSize(16)
+        .fontColor(this.topCurrentIndex === index ? "#333" : "#999")
+        .fontWeight(this.topCurrentIndex === index ? FontWeight.Bold : FontWeight.Normal)
+
+      if (this.topCurrentIndex === index) {
+        Row().width(20).height(4).backgroundColor("#ff2d79").borderRadius(2)
+      } else {
+        Row().width(20).height(4).backgroundColor(Color.Transparent)
+      }
+    }
+    .padding({ left: 10, right: 10 })
+    .onClick(() => { this.topCurrentIndex = index; })
+  }
+
+  // 状态 Tab Builder
+  @Builder statusTabBuilder(name: string, index: number) {
+    Text(name)
+      .fontSize(13)
+      .borderRadius(15)
+      .padding({ top: 6, bottom: 6, left: 16, right: 16 })
+      .fontColor(this.statusIndex === index ? Color.White : "#333")
+      .backgroundColor(this.statusIndex === index ? "#ff2d79" : "#f5f5f5")
+      .margin({ right: 10 })
+      .onClick(() => {
+        if (this.statusIndex !== index) {
+          this.statusIndex = index;
+          this.refreshData();
+        }
+      })
+  }
+
+  // 【核心】订单项 Builder (还原您的截图)
+  @Builder orderItemBuilder(item: OrderItem) {
+    Column() {
+      Row() {
+        // 1. 左侧封面图
+        Image(item.url)
+          .width(80)
+          .height(110)
+          .borderRadius(6)
+          .objectFit(ImageFit.Cover)
+          .margin({ right: 12 })
+          .backgroundColor('#f0f0f0')
+
+        // 2. 中间信息区域
+        Column() {
+          // 标题
+          Text(item.showName)
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#333')
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .margin({ bottom: 8 })
+            .width('100%')
+
+          // 时间
+          Text(item.showSessionTime)
+            .fontSize(12)
+            .fontColor('#666')
+            .margin({ bottom: 4 })
+            .width('100%')
+
+          // 场馆地址
+          Text(item.venueName)
+            .fontSize(12)
+            .fontColor('#666')
+            .width('100%')
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+        .height(110)
+        .justifyContent(FlexAlign.Start) // 顶部对齐
+
+        // 3. 右侧状态 (顶部对齐)
+        Column() {
+          Text(this.getStatusText(item.orderStatus))
+            .fontSize(13)
+            .fontColor('#ff2d79') // 粉红色状态
+        }
+        .height(110)
+        .justifyContent(FlexAlign.Start)
+        .margin({ left: 5 })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Top) // 确保整行顶部对齐
+
+      // 4. 底部价格/数量
+      Row() {
+        Blank()
+        Text(`共${item.number || item.qty || 1}张`)
+          .fontSize(12)
+          .fontColor('#999')
+          .margin({ right: 5 })
+
+        Text("¥")
+          .fontSize(12)
+          .fontColor('#000')
+          .fontWeight(FontWeight.Bold)
+          .baselineOffset(0)
+
+        Text(item.price ? item.price.toFixed(2) : "0.00")
+          .fontSize(18)
+          .fontColor('#000')
+          .fontWeight(FontWeight.Bold)
+      }
+      .width('100%')
+      .margin({ top: 10 })
+      .alignItems(VerticalAlign.Bottom)
+
+    }
+    .width('100%')
+    .padding(15)
+    .backgroundColor(Color.White)
+    .borderRadius(10)
+    .margin({ bottom: 12 })
+  }
+
+  build() {
+    NavDestination() {
+      Column() {
+        // 标题栏
+        Row() {
+          Image($r("app.media.back")).width(24).height(24)
+            .onClick(() => { NavUtils.pop() })
+          Text("我的订单").fontSize(18).fontWeight(FontWeight.Bold).layoutWeight(1).textAlign(TextAlign.Center).margin({ right: 24 })
+        }.width("100%").height(50).padding({ left: 15, right: 15 }).backgroundColor(Color.White)
+
+        // 顶部一级分类
+        List() {
+          ForEach(this.topDatas, (item: CategoryData, index: number) => {
+            ListItem() { this.topCategoryBuilder(item, index) }
+          })
+        }.listDirection(Axis.Horizontal).scrollBar(BarState.Off).width("100%").height(40).backgroundColor(Color.White)
+
+        Divider().color("#F5F5F5").width("100%").strokeWidth(1)
+
+        // 状态筛选栏
+        Row() {
+          ForEach(this.statusTabs, (item: object, index: number) => {
+            this.statusTabBuilder(this.statusTabs[index].name, index)
+          })
+        }.width("100%").padding({ left: 15, right: 15, top: 12, bottom: 12 }).backgroundColor(Color.White)
+
+        // 列表区域
+        List() {
+          if (this.orderList.length === 0 && !this.isLoading) {
+            ListItem() {
+              Column() {
+                // 确保您有这个空状态图片，或者用 Text 代替
+                // Image($r('app.media.empty')).width(100).margin({ bottom: 10 })
+                Text("暂无订单数据").fontSize(14).fontColor("#999")
+              }.width("100%").margin({ top: 100 }).alignItems(HorizontalAlign.Center)
+            }
+          } else {
+            ForEach(this.orderList, (item: OrderItem) => {
+              ListItem() { this.orderItemBuilder(item) }
+            })
+          }
+          // 底部加载状态
+          ListItem() {
+            Row() {
+              Text(this.isLoading ? "加载中..." : (this.isEnd ? "没有更多了" : ""))
+                .fontSize(12).fontColor("#999")
+            }.width("100%").justifyContent(FlexAlign.Center).height(40)
+          }
+        }
+        .layoutWeight(1)
+        .width("100%")
+        .scrollBar(BarState.Off)
+        .padding({ left: 15, right: 15 })
+        .backgroundColor("#F5F5F5")
+        .onReachEnd(() => { this.loadMoreData() })
+      }
+      .width('100%').height('100%').backgroundColor("#F5F5F5")
+    }.hideTitleBar(true)
+  }
+}
