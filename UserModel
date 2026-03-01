@@ -1,5 +1,3 @@
-// src/main/ets/model/UserModel.ets
-
 export interface LoginRequest {
   account?: string;
   password?: string;
@@ -68,15 +66,18 @@ export interface ShowItem {
   title?: string;
   image?: string;
   sortName?: string;
+  // --- 新增供搜索结果页使用的字段 ---
+  showTime?: string;   // 演出时间
+  venueName?: string;  // 场馆名称
+  city?: string;       // 城市
+  artist?: string;     // 艺人名称
 }
 
-// 【修复】定义 data 内部的对象结构
 export interface ShowListData {
   total: number;
   list: ShowItem[];
 }
 
-// 【修复】data 类型明确为联合类型，不再使用 unknown
 export interface ShowListResponse {
   code: number;
   msg: string;
@@ -122,4 +123,40 @@ export interface ShowDetailResponse {
   code: number;
   msg: string | null;
   data: ShowDetailData;
+}
+
+// --- 新增：抢票相关 ---
+
+export interface BuyTicketRequest {
+  sessionId: number;
+  quantity: number;
+}
+
+export interface BuyTicketResponse {
+  code: number;
+  msg: string;
+  data: Object | null;
+}
+export interface OrderItem {
+  id: string | number;
+  orderId?: string | number; // 兼容不同字段
+  showName: string;
+  showSessionTime: string;
+  venueName: string;
+  price: number;
+  number: number; // 数量
+  qty?: number;   // 兼容字段
+  url: string;    // 封面图
+  orderStatus: number; // 0:待付款, 1:已付款/待收货, 2:已完成, etc.
+}
+
+interface GeneratedTypeLiteralInterface_1 {
+  total: number;
+  list: OrderItem[];
+}
+
+export interface OrderListResponse {
+  code: number;
+  msg: string;
+  data: GeneratedTypeLiteralInterface_1 | OrderItem[]; // 兼容直接返回数组的情况
 }
