@@ -1,6 +1,6 @@
 import { NavUtils } from "../utils/NavUtils";
 import { UserApi } from "../api/UserApi";
-import { ShowItem } from "../model/UserModel";
+import { LoginStateManager } from "../utils/LoginStateManager"; // 【新增】引入状态管理
 
 interface Swiper { icon: ResourceStr }
 interface Show { title: string; introduction: string; photo: ResourceStr; price: number; install?: boolean; }
@@ -8,17 +8,17 @@ interface HomePageClass { text: string; icon: ResourceStr }
 
 @Component
 export struct HomePage {
-  HomePageData1: Array<HomePageClass> = [
+  HomePageData1: Array<HomePageClass> =[
     { text: '音乐节', icon: $r('app.media.musicparty') }, { text: 'Livehouse', icon: $r('app.media.2') }, { text: '舞蹈舞剧', icon: $r('app.media.dance') }, { text: '脱口秀', icon: $r('app.media.show') }, { text: '相声曲艺', icon: $r('app.media.3') },
   ]
-  HomePageData2: Array<HomePageClass> = [
+  HomePageData2: Array<HomePageClass> =[
     { text: '沉浸式演出', icon: $r('app.media.dancing') }, { text: '展览', icon: $r('app.media.exhibitian') }, { text: '音乐会', icon: $r('app.media.musicmeet') }, { text: '儿童亲子', icon: $r('app.media.1') }, { text: '今日秒杀', icon: $r('app.media.today') },
   ]
-  HomePageData3: Array<HomePageClass> = [
+  HomePageData3: Array<HomePageClass> =[
     { text: '演出日历', icon: $r('app.media.canlender') }, { text: '大麦榜单', icon: $r('app.media.movie') }, { text: '团购券', icon: $r('app.media.rank') }, { text: '周边商城', icon: $r('app.media.market') }, { text: '全部', icon: $r('app.media.all') },
   ]
 
-  @State showdata: Array<Show> = [
+  @State showdata: Array<Show> =[
     { title: '话剧', introduction: "中国国家话剧院演出", photo: $r('app.media.red'), price: 50 },
     { title: '演唱会', introduction: "马建涛巡回演唱会", photo: $r('app.media.majiaotao'), price: 199 },
     { title: '演唱会', introduction: "2025毕雯珺'毕达之地'", photo: $r('app.media.bi'), price: 380 },
@@ -26,7 +26,7 @@ export struct HomePage {
     { title: '演唱会', introduction: "声声不息演唱会", photo: $r('app.media.SSBX'), price: 99 },
   ]
 
-  swiperList: Array<Swiper> = [
+  swiperList: Array<Swiper> =[
     { icon: $r("app.media.Sw1") }, { icon: $r("app.media.Sw2") }, { icon: $r("app.media.Sw3") }, { icon: $r("app.media.Sw4") }
   ]
 
@@ -39,8 +39,6 @@ export struct HomePage {
         title: remoteItem.sortName ?? "演唱会",
         introduction: remoteItem.title ?? (remoteItem.name ?? "未知"),
         photo: remoteItem.image ?? (remoteItem.cover ?? $r('app.media.SSBX')),
-
-        // 【核心修复】这里优先读取 price 字段
         price: remoteItem.price ?? (remoteItem.minPrice ?? 99)
       });
     }
@@ -61,8 +59,8 @@ export struct HomePage {
           }
           .border({ color: '#000', width: 2, radius: 8 }).padding({ left: 6, right:2 }).height(40).layoutWeight(1).backgroundColor(Color.White)
         }
-        .linearGradient({ direction:GradientDirection.Right, colors: [ ['#fee4c7', 0.0], ['#f9d2eb', 1.0] ] })
-        .width('100%').margin({bottom:10}).expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .linearGradient({ direction:GradientDirection.Right, colors: [['#fee4c7', 0.0], ['#f9d2eb', 1.0] ] })
+        .width('100%').margin({bottom:10}).expandSafeArea([SafeAreaType.SYSTEM],[SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .padding({left: 10, right: 10, top: 10, bottom: 10})
 
         Column() {
@@ -95,7 +93,16 @@ export struct HomePage {
                     Text(item.title).padding({ left: 2, right: 2, top: 3, bottom: 3 }).textAlign(TextAlign.Center).border({ radius: 5 }).fontSize(10).backgroundColor(Color.Black).fontColor(Color.White).fontWeight(FontWeight.Bold).margin({ left: 5, top: 3 })
                   }
                   .alignContent(Alignment.TopStart).margin({ bottom: 4 })
-                  .onClick(() => { if (index === 4) { NavUtils.push('detail') } })
+                  .onClick(() => {
+                    if (index === 4) {
+                      // 【核心修改】判断登录状态，未登录去 login，已登录去 detail
+                      if (LoginStateManager.isLoggedIn()) {
+                        NavUtils.push('detail')
+                      } else {
+                        NavUtils.push('login')
+                      }
+                    }
+                  })
 
                   Text(item.introduction).width("100%").maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).fontColor(Color.Black).fontWeight(FontWeight.Bold).margin({ bottom: 5 })
                   Row() { Text("¥").fontColor("#FF7F24").margin({ right: 1 }).fontSize(10); Text(item.price + "").fontColor("#FF7F24").margin({ right: 1 }).fontSize(16).fontWeight(FontWeight.Bold); Text("起").fontColor(Color.Gray).fontSize(10) }.width("auto")
