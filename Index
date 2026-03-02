@@ -1,18 +1,56 @@
 import { NavUtils } from '../utils/NavUtils';
+import { LayoutsBuilder } from './Layouts';
+import { detailBuilder } from './detail';
+import { EditInfoBuilder } from './EditInfo';
+import { loginBuilder } from './login';
+import { SearchsBuilder } from './Searchs';
+import { SearchResultBuilder } from './SearchResult';
+import { NextBuilder } from './Next';
+import { AdBuilder } from './Ad'; // 【新增】引入真实的广告页
 
 @Entry
 @Component
 struct Index {
-  // 直接使用全局单例栈
   pathStack: NavPathStack = NavUtils.stack;
 
+  @Builder
+  routerMap(name: string, param: Object) {
+    if (name === 'Ad') {
+      // 【修改】调用真实的 AdBuilder
+      AdBuilder()
+    }
+    else if (name === 'Layouts') {
+      LayoutsBuilder()
+    }
+    else if (name === 'detail') {
+      detailBuilder()
+    }
+    else if (name === 'EditInfo') {
+      EditInfoBuilder()
+    }
+    else if (name === 'login') {
+      loginBuilder()
+    }
+    else if (name === 'Searchs') {
+      SearchsBuilder()
+    }
+    else if (name === 'SearchResult') {
+      SearchResultBuilder(param)
+    }
+    else if (name === 'Next') {
+      NextBuilder()
+    }
+  }
+
   aboutToAppear(): void {
+    // 启动 App 首先压入真实广告页
     NavUtils.push("Ad");
   }
 
   build() {
     Navigation(this.pathStack) {
     }
+    .navDestination(this.routerMap)
     .hideNavBar(true)
     .width('100%')
     .height('100%')
