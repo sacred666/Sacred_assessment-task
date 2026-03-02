@@ -1,4 +1,4 @@
-import { AppStorageV2 } from "@kit.ArkUI";
+import { NavUtils } from '../utils/NavUtils';
 
 @Builder
 export function AdBuilder() {
@@ -6,37 +6,63 @@ export function AdBuilder() {
 }
 
 @Component
-struct Ad {
-  // 这里先定义，但在 onReady 中会用 context.pathStack 覆盖，确保绝对有值
-  pathStack: NavPathStack = AppStorageV2.connect(NavPathStack, 'navStack')!;
+export struct Ad {
+  @State countdown: number = 3;
+  private timer: number = -1;
+
+  aboutToAppear() {
+    // 开启定时器，每秒执行一次
+    this.timer = setInterval(() => {
+      this.countdown -= 1;
+      if (this.countdown <= 0) {
+        this.jumpToMain();
+      }
+    }, 1000);
+  }
+
+  aboutToDisappear() {
+    // 页面销毁时清理定时器，防止内存泄漏
+    this.clearTimer();
+  }
+
+  clearTimer() {
+    if (this.timer !== -1) {
+      clearInterval(this.timer);
+      this.timer = -1;
+    }
+  }
+
+  jumpToMain() {
+    this.clearTimer();
+    // 广告页跳过时使用 replace，这样用户按返回键就不会再回到广告页了
+    NavUtils.replace('Layouts');
+  }
 
   build() {
     NavDestination() {
-      Stack({alignContent:Alignment.TopEnd}) {
-        Image($r("app.media.adphoto"))
-          .width("100%")
-          .height("100%")
-          .expandSafeArea([SafeAreaType.SYSTEM],[SafeAreaEdge.TOP,SafeAreaEdge.BOTTOM])
+      Stack({ alignContent: Alignment.TopEnd }) {
+        // 广告背景图 (如果这里报错，请换成你 resources/base/media 下真实的图片名，比如 app.media.ad1)
+        Image($r('app.media.guanggao'))
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Cover)
+          .backgroundColor('#F5F5F5') // 如果图片没加载出来，显示灰色背景兜底
 
-        Button("跳过")
-          .backgroundColor(Color.Gray)
-          .margin({ top: 40, right: 20 })
+        // 右上角跳过按钮
+        Text(`跳过 ${this.countdown}s`)
+          .fontColor(Color.White)
+          .fontSize(14)
+          .backgroundColor('rgba(0,0,0,0.3)') // 半透明黑底
+          .padding({ left: 14, right: 14, top: 6, bottom: 6 })
+          .borderRadius(15)
+          .margin({ top: 50, right: 20 }) // 避开状态栏
           .onClick(() => {
-            // 点击跳过，直接替换到 Layouts
-            this.pathStack.replacePathByName("Layouts", null, false);
+            this.jumpToMain();
           })
       }
+      .width('100%')
+      .height('100%')
     }
     .hideTitleBar(true)
-    .onReady((context: NavDestinationContext) => {
-      // 【关键修复】确保拿到当前栈
-      this.pathStack = context.pathStack;
-
-      // 启动定时器，3秒后自动跳转
-      setTimeout(() => {
-        // 使用 replacePathByName，这样按返回键就会退出App，而不是回广告页
-        this.pathStack.replacePathByName("Layouts", null, false);
-      }, 3000);
-    })
   }
 }
