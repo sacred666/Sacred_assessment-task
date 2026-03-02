@@ -3,9 +3,10 @@ export class NavUtils {
   // 全局唯一的路由栈实例
   static readonly stack: NavPathStack = new NavPathStack();
 
-  static push(name: string) {
-    console.info(`NavUtils: push -> ${name}`);
-    NavUtils.stack.pushPathByName(name, null);
+  // 【修复】增加 param 参数，默认为 null，解决 Searchs.ets 调用报错的问题
+  static push(name: string, param: Object | null = null) {
+    console.info(`NavUtils: push -> ${name}, param: ${JSON.stringify(param)}`);
+    NavUtils.stack.pushPathByName(name, param);
   }
 
   static pop() {
@@ -13,8 +14,8 @@ export class NavUtils {
     NavUtils.stack.pop();
   }
 
-  static replace(name: string) {
-    NavUtils.stack.replacePathByName(name, null, false);
+  static replace(name: string, param: Object | null = null) {
+    NavUtils.stack.replacePathByName(name, param, false);
   }
 
   static clear() {
