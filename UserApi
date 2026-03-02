@@ -3,7 +3,7 @@ import {
   LoginRequest, UserInfo, UpdateUserParams, LoginData, LogoutParams, AddAddressRequest, ImageBody, UploadResponse,
   ShowItem, ShowListResponse, ShowDetailResponse, ShowDetailData,
   BuyTicketRequest, BuyTicketResponse,
-  OrderItem, OrderListResponse // 确保引入了 OrderItem
+  OrderItem, OrderListResponse
 } from '../model/UserModel';
 import { LoginStateManager } from '../utils/LoginStateManager';
 import { promptAction } from '@kit.ArkUI';
@@ -13,7 +13,7 @@ import { common } from '@kit.AbilityKit';
 
 const BASE_URL = 'http://8.136.46.14:8080';
 
-// ================== 接口定义区域 ==================
+// ---------------- 接口定义 ----------------
 interface BackendData {
   token?: string;
   access_token?: string;
@@ -39,23 +39,35 @@ interface ResponseWrapper {
   gender?: number;
 }
 
-// 【新增】用于暴力兼容后端订单分页接口可能出现的各种 JSON 结构
-interface FlexData {
+// 订单列表专用的弹性接口
+interface OrderFlexData {
   list?: OrderItem[];
   records?: OrderItem[];
   rows?: OrderItem[];
   data?: OrderItem[];
 }
-
-interface FlexResponse {
+interface OrderFlexResponse {
   code?: number;
   msg?: string;
-  data?: FlexData | OrderItem[];
+  data?: OrderFlexData | OrderItem[];
 }
 
+// 演出搜索专用的弹性接口
+interface ShowFlexData {
+  list?: ShowItem[];
+  records?: ShowItem[];
+  rows?: ShowItem[];
+  data?: ShowItem[];
+}
+interface ShowFlexResponse {
+  code?: number;
+  msg?: string;
+  data?: ShowFlexData | ShowItem[];
+}
 
-// ================== API 类定义 ==================
+// ---------------- API 类 ----------------
 export class UserApi {
+
   // 1. 登录
   static async login(params: LoginRequest): Promise<boolean> {
     const httpRequest = http.createHttp();
@@ -78,7 +90,6 @@ export class UserApi {
 
         if (token !== undefined && token.length > 0) {
           await LoginStateManager.login(token);
-          // 登录成功 -> 拉取最新数据
           await UserApi.getUserInfo();
           promptAction.showToast({ message: '登录成功' });
           return true;
@@ -132,7 +143,6 @@ export class UserApi {
         }
 
         if (info !== undefined) {
-          // 这一步会将最新数据写入硬盘，并刷新 UI
           await LoginStateManager.saveUserInfo(info);
         }
       }
@@ -142,14 +152,13 @@ export class UserApi {
     }
   }
 
-  // 3. 【双重保险】修改用户信息
+  // 3. 修改用户信息
   static async updateUserInfo(params: UpdateUserParams): Promise<boolean> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
     if (token.length === 0) return false;
 
-    // --- 策略 A: 拼接到 URL (Query Params) ---
-    let urlParams: string[] =[];
+    let urlParams: string[] = [];
     if (params.name !== undefined) {
       urlParams.push(`name=${encodeURIComponent(params.name)}`);
     }
@@ -162,12 +171,9 @@ export class UserApi {
     }
     const finalUrl = `${BASE_URL}/user/user${queryString}`;
 
-    // --- 策略 B: 放入 Body (JSON) ---
     let bodyData: Record<string, Object> = {};
-
-    if (params.image !== undefined) bodyData['image'] = params.image; else if (params.avatar !==
-      undefined) bodyData['image'] = params.avatar;
-
+    if (params.image !== undefined) bodyData['image'] = params.image;
+    else if (params.avatar !== undefined) bodyData['image'] = params.avatar;
     if (params.name !== undefined) bodyData['name'] = params.name;
     if (params.gender !== undefined) bodyData['gender'] = params.gender;
 
@@ -175,11 +181,10 @@ export class UserApi {
       const response = await httpRequest.request(finalUrl, {
         method: http.RequestMethod.PUT,
         header: { 'Content-Type': 'application/json', 'token': token },
-        extraData: bodyData // 发送全量数据
+        extraData: bodyData
       });
 
       if (response.responseCode === 200) {
-        // 修改成功后立即拉取最新数据
         await UserApi.getUserInfo();
         promptAction.showToast({ message: '修改成功' });
         return true;
@@ -280,7 +285,6 @@ export class UserApi {
     httpRequest.destroy();
   }
 
-
   // 7. 获取首页演出列表
   static async getShowList(): Promise<ShowItem[]> {
     const httpRequest = http.createHttp();
@@ -301,7 +305,7 @@ export class UserApi {
     } finally {
       httpRequest.destroy();
     }
-    return[];
+    return [];
   }
 
   // 8. 获取详情
@@ -369,47 +373,32 @@ export class UserApi {
     }
   }
 
-  // 10. 【终极兼容修复】获取订单列表
+  // 10. 获取订单列表
   static async getOrderList(page: number, pageSize: number = 10, status: number | null): Promise<OrderItem[]> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
 
     if (!token || token.length === 0) {
-      console.info('UserApi: No token, return empty order list');
       return [];
     }
 
     try {
       let url = `${BASE_URL}/user/order?page=${page}&pageSize=${pageSize}`;
-
-      // 注意：如果您后端的“全部订单”也必须传 orderStatus=0 或为空，请在这里调整
-      // 目前逻辑：如果不等于 -1，才拼接到 url 里
       if (status !== null && status !== -1) {
         url += `&orderStatus=${status}`;
       }
-
-      console.info(`UserApi: 请求订单 -> URL: ${url}`);
-
       const response = await httpRequest.request(url, {
         method: http.RequestMethod.GET,
         header: { 'Content-Type': 'application/json', 'token': token }
       });
 
       if (response.responseCode === 200) {
-        // 打印原始字符串，如果在 Log 看到这里有真实数据，说明网路没问题
-        console.info(`UserApi: 订单原始响应 -> ${response.result}`);
-
-        // 利用 FlexResponse 兼容任意数据结构，不再出现 any 警告
-        const resObj = JSON.parse(response.result as string) as FlexResponse;
-
-        if (resObj.data) {
-          // 场景 1: data 字段直接是一个数组 (后端直接返回数组)
+        const resObj = JSON.parse(response.result as string) as OrderFlexResponse;
+        if (resObj.code === 1 && resObj.data) {
           if (Array.isArray(resObj.data)) {
             return resObj.data as OrderItem[];
           }
-
-          // 场景 2: data 是一个分页对象，里面可能是 list / records / rows 字段
-          const pageObj = resObj.data as FlexData;
+          const pageObj = resObj.data as OrderFlexData;
           if (pageObj.list && Array.isArray(pageObj.list)) return pageObj.list;
           if (pageObj.records && Array.isArray(pageObj.records)) return pageObj.records;
           if (pageObj.rows && Array.isArray(pageObj.rows)) return pageObj.rows;
@@ -417,11 +406,59 @@ export class UserApi {
         }
       }
     } catch (e) {
-      console.error('UserApi: 订单请求失败', JSON.stringify(e));
     } finally {
       httpRequest.destroy();
     }
-    return []
+    return [];
   }
 
+
+  // 11. 【修复】搜索演出列表
+  // 确保使用 keyword 参数，并增强解析容错性
+  static async searchShow(keyword: string): Promise<ShowItem[]> {
+    const httpRequest = http.createHttp();
+    const token = await LoginStateManager.getToken();
+
+    try {
+      // 这里的 keyword 参数名必须与 Apifox/后端一致
+      const url = `${BASE_URL}/user/show/search?keyword=${encodeURIComponent(keyword)}`;
+      console.info(`UserApi: 发起搜索 -> ${url}`);
+
+      const header: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        header['token'] = token;
+      }
+
+      const response = await httpRequest.request(url, {
+        method: http.RequestMethod.GET,
+        header: header
+      });
+
+      if (response.responseCode === 200) {
+        // 使用 ShowFlexResponse 接口解析，避免 any 报错
+        const resObj = JSON.parse(response.result as string) as ShowFlexResponse;
+
+        console.info(`UserApi: 搜索结果 -> ${JSON.stringify(resObj)}`); // 添加日志方便调试
+
+        if (resObj.code === 1 && resObj.data) {
+          // 情况 1: data 直接是数组
+          if (Array.isArray(resObj.data)) {
+            return resObj.data as ShowItem[];
+          }
+
+          // 情况 2: data 是对象 (尝试读取 list, records, rows, data)
+          const pageObj = resObj.data as ShowFlexData;
+          if (pageObj.list && Array.isArray(pageObj.list)) return pageObj.list;
+          if (pageObj.records && Array.isArray(pageObj.records)) return pageObj.records;
+          if (pageObj.rows && Array.isArray(pageObj.rows)) return pageObj.rows;
+          if (pageObj.data && Array.isArray(pageObj.data)) return pageObj.data;
+        }
+      }
+    } catch (e) {
+      console.error('UserApi: 搜索请求失败', JSON.stringify(e));
+    } finally {
+      httpRequest.destroy();
+    }
+    return [];
+  }
 }
