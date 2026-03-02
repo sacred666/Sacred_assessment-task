@@ -53,7 +53,7 @@ export interface UploadResponse {
   data: string;
 }
 
-// --- 演出列表相关 ---
+// --- 演出列表/搜索结果相关 ---
 
 export interface ShowItem {
   id: string;
@@ -66,6 +66,7 @@ export interface ShowItem {
   title?: string;
   image?: string;
   sortName?: string;
+
   // --- 新增供搜索结果页使用的字段 ---
   showTime?: string;   // 演出时间
   venueName?: string;  // 场馆名称
@@ -125,7 +126,7 @@ export interface ShowDetailResponse {
   data: ShowDetailData;
 }
 
-// --- 新增：抢票相关 ---
+// --- 抢票/订单相关 ---
 
 export interface BuyTicketRequest {
   sessionId: number;
@@ -137,17 +138,25 @@ export interface BuyTicketResponse {
   msg: string;
   data: Object | null;
 }
+
 export interface OrderItem {
   id: string | number;
-  orderId?: string | number; // 兼容不同字段
-  showName: string;
-  showSessionTime: string;
+  orderId?: string | number;
+  showName: string; // 兼容后端可能的 showTitle
+  showTitle?: string;
+  name?: string;
+  showSessionTime: string; // 兼容后端可能的 sessionStartTime
+  sessionStartTime?: string;
   venueName: string;
-  price: number;
-  number: number; // 数量
-  qty?: number;   // 兼容字段
-  url: string;    // 封面图
-  orderStatus: number; // 0:待付款, 1:已付款/待收货, 2:已完成, etc.
+  price?: number;
+  totalPrice?: number;
+  number?: number;
+  quantity?: number;
+  qty?: number;
+  url?: string;
+  image?: string;
+  cover?: string;
+  orderStatus: number;
 }
 
 interface GeneratedTypeLiteralInterface_1 {
@@ -158,5 +167,5 @@ interface GeneratedTypeLiteralInterface_1 {
 export interface OrderListResponse {
   code: number;
   msg: string;
-  data: GeneratedTypeLiteralInterface_1 | OrderItem[]; // 兼容直接返回数组的情况
+  data: GeneratedTypeLiteralInterface_1 | OrderItem[];
 }
