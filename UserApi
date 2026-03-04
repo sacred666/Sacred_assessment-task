@@ -10,7 +10,7 @@ import { promptAction } from '@kit.ArkUI';
 import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 import { common } from '@kit.AbilityKit';
-
+import { AddressItem, AddressResponse } from '../model/UserModel';
 const BASE_URL = 'http://8.136.46.14:8080';
 
 // ---------------- 接口定义 ----------------
@@ -242,7 +242,7 @@ export class UserApi {
   }
 
   // 5. 添加地址
-  static async addAddress(addr: AddAddressRequest): Promise<boolean> {
+  static async addAddress1(addr: AddAddressRequest): Promise<boolean> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
     if (token.length === 0) return false;
@@ -460,5 +460,68 @@ export class UserApi {
       httpRequest.destroy();
     }
     return [];
+  }
+  // 12. 获取地址列表 (GET)
+  static async getAddressList(page: number = 1, pageSize: number = 10): Promise<AddressItem[]> {
+    const httpRequest = http.createHttp();
+    const token = await LoginStateManager.getToken();
+    try {
+      const url = `${BASE_URL}/user/user/map?page=${page}&pageSize=${pageSize}`;
+      const response = await httpRequest.request(url, {
+        method: http.RequestMethod.GET,
+        header: { 'Content-Type': 'application/json', 'token': token }
+      });
+      if (response.responseCode === 200) {
+        const resObj = JSON.parse(response.result as string) as AddressResponse;
+        if (resObj.code === 1 && resObj.data && resObj.data.records) {
+          return resObj.data.records;
+        }
+      }
+    } catch (e) {} finally { httpRequest.destroy(); }
+    return [];
+  }
+
+  // 13. 修改地址 (PUT)
+  static async updateAddress(addressId: number, data: Partial<AddressItem>): Promise<boolean> {
+    const httpRequest = http.createHttp();
+    const token = await LoginStateManager.getToken();
+    try {
+      const response = await httpRequest.request(`${BASE_URL}/user/user/map/${addressId}`, {
+        method: http.RequestMethod.PUT,
+        header: { 'Content-Type': 'application/json', 'token': token },
+        extraData: data
+      });
+      return response.responseCode === 200;
+    } catch (e) { return false; } finally { httpRequest.destroy(); }
+  }
+
+
+  static async addAddress(params: AddressItem): Promise<boolean> {
+    const httpRequest = http.createHttp();
+    const token = await LoginStateManager.getToken();
+
+    try {
+      const response = await httpRequest.request(`${BASE_URL}/user/user/map`, {
+        method: http.RequestMethod.POST,
+        header: {
+          'Content-Type': 'application/json',
+          'token': token
+        },
+        // 这里的 params 已经是处理好的 AddressItem 对象
+        extraData: params
+      });
+
+      if (response.responseCode === 200) {
+        // 假设返回的 code 为 1 表示成功
+        const resObj = JSON.parse(response.result as string) as Record<string, Object>;
+        return resObj['code'] === 1;
+      }
+      return false;
+    } catch (e) {
+      console.error("UserApi: addAddress Error", JSON.stringify(e));
+      return false;
+    } finally {
+      httpRequest.destroy();
+    }
   }
 }
