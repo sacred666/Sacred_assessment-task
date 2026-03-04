@@ -1,0 +1,111 @@
+import { NavUtils } from '../utils/NavUtils';
+import { UserApi } from '../api/UserApi';
+import { AddressItem } from '../model/UserModel';
+
+@Builder
+export function AddressListBuilder() {
+  AddressList();
+}
+
+@Component
+struct AddressList {
+  @State addresses: AddressItem[] = [];
+  @State page: number = 1;
+  @State isLoading: boolean = false;
+
+  // 组件初始化立即加载，解决“进去看不到数据”的问题
+  async aboutToAppear() {
+    await this.loadData(true);
+  }
+
+  async loadData(isRefresh: boolean) {
+    if (this.isLoading) return;
+    this.isLoading = true;
+    if (isRefresh) this.page = 1;
+
+    try {
+      const list = await UserApi.getAddressList(this.page);
+      if (isRefresh) {
+        this.addresses = list;
+      } else {
+        this.addresses = [...this.addresses, ...list];
+      }
+    } catch (e) {
+      console.error("AddressList Load Error");
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  build() {
+    NavDestination() {
+      Column() {
+        // 顶部标题栏
+        Row() {
+          Image($r('app.media.back')).width(24).onClick(() => NavUtils.pop())
+          Text("常用信息").fontSize(18).fontWeight(FontWeight.Bold).layoutWeight(1).textAlign(TextAlign.Center)
+        }.width('100%').padding(15).backgroundColor(Color.White)
+
+        // 切换 Tab 效果
+        Row() {
+          Text("观演人").fontSize(16).fontColor('#666').margin({ right: 40 })
+          Column() {
+            Text("收货地址").fontSize(16).fontColor('#FF6600').fontWeight(FontWeight.Bold)
+            Row().width(30).height(3).backgroundColor('#FF6600').margin({ top: 5 })
+          }
+        }.width('100%').padding({ left: 50, bottom: 10 }).backgroundColor(Color.White)
+
+        // 瀑布流地址列表
+        List({ space: 12 }) {
+          ForEach(this.addresses, (item: AddressItem) => {
+            ListItem() {
+              Row() {
+                Column({ space: 8 }) {
+                  Row() {
+                    Text("收货人").fontSize(16).fontWeight(FontWeight.Bold).margin({ right: 10 })
+                    Text("151****0178").fontSize(14).fontColor('#999')
+                  }
+                  // 优先展示完整地址
+                  Text(item.fullAddress || `${item.province}${item.city}${item.district}${item.detailedAddress}`)
+                    .fontSize(14).fontColor('#333').lineHeight(20)
+
+                  Row() {
+                    // 【样式修复】根据 isDefault (1为选中) 显示彩色图标，否则显示灰色圆圈
+                    Image(item.isDefault === 1 ? $r('app.media.moren') : $r('app.media.nomoren'))
+                      .width(18).height(18).margin({ right: 5 })
+                    Text("设为默认地址")
+                      .fontSize(12)
+                      .fontColor(item.isDefault === 1 ? '#FF6600' : '#999')
+                  }
+                }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+
+                Image($r('app.media.right')).width(16).fillColor('#CCC')
+              }
+              .padding(15).backgroundColor(Color.White).borderRadius(12)
+              .onClick(() => NavUtils.push("EditAddress", item as Object))
+            }
+          })
+        }
+        .layoutWeight(1)
+        .padding(10)
+        .onReachEnd(() => {
+          if (!this.isLoading) {
+            this.page++;
+            this.loadData(false);
+          }
+        })
+
+        // 底部新增按钮
+        Button("添加收货地址")
+          .width('90%').height(45).margin(20)
+          .linearGradient({ colors: [['#FF9D00', 0], ['#FF4D00', 1]] })
+          .onClick(() => NavUtils.push("EditAddress"))
+      }.backgroundColor('#F5F7FA').height('100%')
+    }
+    .hideTitleBar(true)
+    .onShown(() => {
+      // 保持刷新逻辑，确保从编辑页回来时数据是最新的
+      this.loadData(true);
+    })
+  }
+}
