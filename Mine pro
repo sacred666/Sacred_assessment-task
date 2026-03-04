@@ -179,6 +179,7 @@ export struct Mine {
               .onClick(() => {
                 // 保留原有跳转 Next 的逻辑
                 if (index === 0) NavUtils.push('Next');
+                if (index === 3) NavUtils.push("AddressList"); // 下标3对应收货地址
               })
             })
           }
