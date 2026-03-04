@@ -169,3 +169,26 @@ export interface OrderListResponse {
   msg: string;
   data: GeneratedTypeLiteralInterface_1 | OrderItem[];
 }
+export interface AddressItem {
+  phone?: string;
+  name?: string;
+  id: number;
+  province: string;
+  city: string;
+  district: string;
+  detailedAddress: string;
+  fullAddress?: string; // API 返回了这个字段，可以加上
+  isDefault: number;    // 注意：API 返回的是 1 和 0，不是 boolean
+}
+
+export interface AddressListData {
+  list: AddressItem[] | PromiseLike<AddressItem[]>;
+  records: AddressItem[]; // 关键修改：由 list 改为 records
+  total: number;
+}
+
+export interface AddressResponse {
+  code: number;
+  msg: string | null;
+  data: AddressListData;
+}
