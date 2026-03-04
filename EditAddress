@@ -1,0 +1,113 @@
+// src/main/ets/pages/EditAddress.ets
+import { NavUtils } from '../utils/NavUtils';
+import { UserApi } from '../api/UserApi';
+import { AddressItem } from '../model/UserModel';
+import { promptAction } from '@kit.ArkUI';
+
+@Builder
+export function EditAddressBuilder(param: Object) {
+  EditAddress({ routeParam: param })
+}
+
+@Component
+struct EditAddress {
+  userName: string | undefined;
+  userPhone: string | undefined;
+
+  private routeParam: Object = new Object();
+  private addressId: number = 0; // 0 表示新增
+
+  @State province: string = "";
+  @State city: string = "";
+  @State district: string = "";
+  @State detailedAddress: string = "";
+  @State isDefaultStatus: boolean = false;
+
+  aboutToAppear() {
+    // 显式转换路由参数，规避 arkts-no-any-unknown
+    const addr = this.routeParam as AddressItem;
+    if (addr && addr.id) {
+      this.addressId = addr.id;
+      this.province = addr.province || "";
+      this.city = addr.city || "";
+      this.district = addr.district || "";
+      this.detailedAddress = addr.detailedAddress || "";
+      this.isDefaultStatus = addr.isDefault === 1;
+
+    }
+  }
+
+  async handleSave() {
+    // 简单的非空验证
+    if (!this.province || !this.city || !this.detailedAddress) {
+      promptAction.showToast({ message: "请完整填写地址信息" });
+      return;
+    }
+
+    // 构造发送给后端的参数
+    const params: AddressItem = {
+      id: this.addressId,
+      province: this.province,
+      city: this.city,
+      district: this.district,
+      detailedAddress: this.detailedAddress,
+      // 强制转换 boolean -> number (0 或 1)
+      isDefault: this.isDefaultStatus ? 1 : 0,
+      name: this.userName,  // 补齐缺失属性
+      phone: this.userPhone // 补齐缺失属性
+    };
+
+    let success: boolean = false;
+    if (this.addressId > 0) {
+      // 执行修改 (PUT)
+      success = await UserApi.updateAddress(this.addressId, params);
+    } else {
+      // 执行新增 (POST)
+      success = await UserApi.addAddress(params);
+    }
+
+    if (success) {
+      promptAction.showToast({ message: this.addressId > 0 ? "修改成功" : "添加成功" });
+      NavUtils.pop();
+    } else {
+      promptAction.showToast({ message: "操作失败，请检查网络或后端状态" });
+    }
+  }
+
+  build() {
+    NavDestination() {
+      Column() {
+        Row() {
+          Image($r('app.media.back')).width(24).onClick(() => NavUtils.pop())
+          Text(this.addressId > 0 ? "修改地址" : "新增地址").fontSize(18).fontWeight(FontWeight.Bold).layoutWeight(1).textAlign(TextAlign.Center)
+          Text("保存").fontSize(16).fontColor('#FF6600').onClick(() => this.handleSave())
+        }.padding(15).backgroundColor(Color.White)
+
+        List() {
+          this.EditItem("省份", this.province, (v) => this.province = v)
+          this.EditItem("城市", this.city, (v) => this.city = v)
+          this.EditItem("区县", this.district, (v) => this.district = v)
+          this.EditItem("详细地址", this.detailedAddress, (v) => this.detailedAddress = v)
+
+          ListItem() {
+            Row() {
+              Text("设为默认地址").layoutWeight(1).fontSize(16)
+              Toggle({ type: ToggleType.Switch, isOn: this.isDefaultStatus })
+                .onChange((isOn: boolean) => this.isDefaultStatus = isOn)
+            }.width('100%').padding(15)
+          }
+        }.margin({ top: 10 }).backgroundColor(Color.White)
+      }.height('100%').backgroundColor('#F5F7FA')
+    }.hideTitleBar(true)
+  }
+
+  @Builder EditItem(label: string, value: string, onChange: (v: string) => void) {
+    ListItem() {
+      Row() {
+        Text(label).width(100).fontSize(16)
+        TextInput({ text: value, placeholder: `请输入${label}` })
+          .layoutWeight(1).backgroundColor(Color.Transparent).onChange(onChange)
+      }.width('100%').padding({ left: 15, right: 15 })
+    }
+  }
+}
