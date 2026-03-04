@@ -1,5 +1,57 @@
-@ComponentV2
-export struct Find{
+// src/main/ets/pages/Find.ets
+interface PostItem { id: number; title: string; cover: Resource; author: string; likes: string; }
+
+@Component
+export struct Find {
+  @State posts: PostItem[] = [
+    { id: 1, title: '昨晚的演唱会真的太燃了！现场氛围感拉满', cover: $r('app.media.Sw1'), author: '乐评人小王', likes: '1.2k' },
+    { id: 2, title: '音乐节穿搭分享，这样穿绝对是焦点', cover: $r('app.media.Sw2'), author: '穿搭达人', likes: '890' },
+    { id: 3, title: '在大麦抢到了周杰伦！分享我的抢票锦鲤手速', cover: $r('app.media.Sw3'), author: '运气爆棚', likes: '2.3k' },
+    { id: 4, title: '今年必看的5场口碑话剧推荐，不看后悔系列', cover: $r('app.media.Sw4'), author: '话剧爱好者', likes: '560' }
+  ];
+
   build() {
+    Column() {
+      // 1. 顶部 Tab
+      Row() {
+        Text("关注").fontSize(16).fontColor('#999').margin({ right: 25 })
+        Column() {
+          Text("发现").fontSize(20).fontWeight(FontWeight.Bold)
+          Row().width(20).height(3).backgroundColor('#FF6600').margin({ top: 4 })
+        }.margin({ right: 25 })
+        Text("乐评").fontSize(16).fontColor('#999')
+      }.width('100%').padding(15).backgroundColor(Color.White)
+
+      // 2. 瀑布流内容
+      WaterFlow() {
+        ForEach(this.posts, (item: PostItem) => {
+          FlowItem() {
+            Column() {
+              // 修复点：移除了 WidthFix，改用 Cover 并保持宽度占满
+              Image(item.cover)
+                .width('100%')
+                .objectFit(ImageFit.Cover)
+                .borderRadius({ topLeft: 8, topRight: 8 })
+
+              Column({ space: 8 }) {
+                Text(item.title).fontSize(14).fontWeight(FontWeight.Medium).maxLines(2).lineHeight(20)
+                Row() {
+                  Image($r('app.media.id')).width(16).height(16).borderRadius(8).margin({ right: 5 })
+                  Text(item.author).fontSize(11).fontColor('#666').layoutWeight(1)
+                  Image($r('app.media.shoucang')).width(12).height(12).fillColor('#999').margin({ right: 3 })
+                  Text(item.likes).fontSize(11).fontColor('#999')
+                }.width('100%')
+              }.padding(10)
+            }.backgroundColor(Color.White).borderRadius(8)
+          }
+        })
+      }
+      .columnsTemplate("1fr 1fr")
+      .columnsGap(10)
+      .rowsGap(10)
+      .padding(10)
+      .layoutWeight(1)
+      .backgroundColor('#F5F5F5')
+    }
   }
 }
