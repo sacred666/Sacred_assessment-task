@@ -7,6 +7,8 @@ import { SearchsBuilder } from './Searchs';
 import { SearchResultBuilder } from './SearchResult';
 import { NextBuilder } from './Next';
 import { AdBuilder } from './Ad'; // 【新增】引入真实的广告页
+import { AddressListBuilder } from './AddressList';
+import { EditAddressBuilder } from './EditAddress';
 
 @Entry
 @Component
@@ -39,6 +41,13 @@ struct Index {
     }
     else if (name === 'Next') {
       NextBuilder()
+    }
+    // Index.ets routerMap 方法内
+    else if (name === 'AddressList') {
+      AddressListBuilder()
+    }
+    else if (name === 'EditAddress') {
+      EditAddressBuilder(param)
     }
   }
 
