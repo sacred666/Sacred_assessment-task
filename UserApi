@@ -3,20 +3,21 @@ import {
   LoginRequest, UserInfo, UpdateUserParams, LoginData, LogoutParams, AddAddressRequest, ImageBody, UploadResponse,
   ShowItem, ShowListResponse, ShowDetailResponse, ShowDetailData,
   BuyTicketRequest, BuyTicketResponse,
-  OrderItem, OrderListResponse
+  OrderItem, OrderListResponse,
+  AddressItem, AddressResponse
 } from '../model/UserModel';
 import { LoginStateManager } from '../utils/LoginStateManager';
 import { promptAction } from '@kit.ArkUI';
 import fs from '@ohos.file.fs';
 import util from '@ohos.util';
 import { common } from '@kit.AbilityKit';
-import { AddressItem, AddressResponse } from '../model/UserModel';
+
 const BASE_URL = 'http://8.136.46.14:8080';
 
 // ---------------- 接口定义 ----------------
 interface BackendData {
-  token?: string;
-  access_token?: string;
+  token?: string | null;
+  access_token?: string | null;
   id?: string | number;
   name?: string;
   username?: string;
@@ -28,9 +29,9 @@ interface BackendData {
 interface ResponseWrapper {
   code?: number;
   msg?: string;
-  data?: BackendData;
-  access_token?: string;
-  token?: string;
+  data?: BackendData | null; // 【修复1】允许 data 为 null
+  access_token?: string | null;
+  token?: string | null;     // 【修复2】允许 token 为 null
   id?: string | number;
   name?: string;
   username?: string;
@@ -39,7 +40,6 @@ interface ResponseWrapper {
   gender?: number;
 }
 
-// 订单列表专用的弹性接口
 interface OrderFlexData {
   list?: OrderItem[];
   records?: OrderItem[];
@@ -52,7 +52,6 @@ interface OrderFlexResponse {
   data?: OrderFlexData | OrderItem[];
 }
 
-// 演出搜索专用的弹性接口
 interface ShowFlexData {
   list?: ShowItem[];
   records?: ShowItem[];
@@ -68,38 +67,70 @@ interface ShowFlexResponse {
 // ---------------- API 类 ----------------
 export class UserApi {
 
-  // 1. 登录
+  // 1. 登录与注册共用接口
   static async login(params: LoginRequest): Promise<boolean> {
     const httpRequest = http.createHttp();
+    const jsonStr = JSON.stringify(params);
+    console.info("🚀 [发送给后端的数据]：", jsonStr);
+
     try {
+      const localToken = await LoginStateManager.getToken();
+      let headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (localToken) headers['token'] = localToken;
+
       const response = await httpRequest.request(`${BASE_URL}/user/login`, {
         method: http.RequestMethod.POST,
-        header: { 'Content-Type': 'application/json' },
-        extraData: params
+        header: headers,
+        extraData: jsonStr,
+        readTimeout: 10000,
+        connectTimeout: 10000
       });
 
+      console.info(`==== 后端返回 HTTP 状态码: ${response.responseCode} ====`);
+      console.info("==== 后端返回完整内容 ====", response.result);
+
       if (response.responseCode === 200) {
-        const resObj = JSON.parse(response.result as string) as ResponseWrapper;
-        let token: string | undefined = undefined;
-
-        if (resObj.data !== undefined) {
-          token = resObj.data.token || resObj.data.access_token;
-        } else {
-          token = resObj.token || resObj.access_token;
+        let resObj: ResponseWrapper;
+        try {
+          resObj = JSON.parse(response.result as string) as ResponseWrapper;
+        } catch (e) {
+          promptAction.showToast({ message: '数据解析失败，请检查后端服务' });
+          return false;
         }
 
-        if (token !== undefined && token.length > 0) {
-          await LoginStateManager.login(token);
-          await UserApi.getUserInfo();
-          promptAction.showToast({ message: '登录成功' });
-          return true;
+        // 以 code === 1 作为真正的成功标准
+        if (resObj.code === 1) {
+
+          // 【核心修复】极其安全的 token 获取方式，彻底杜绝 null.length 崩溃
+          let token: string = '';
+          if (resObj.data && typeof resObj.data === 'object') {
+            token = resObj.data.token || resObj.data.access_token || '';
+          }
+          if (!token) {
+            token = resObj.token || resObj.access_token || '';
+          }
+
+          // 只有当 token 是有效字符串时，才执行登录状态保存
+          if (typeof token === 'string' && token.length > 0) {
+            await LoginStateManager.login(token);
+            await UserApi.getUserInfo();
+          } else {
+            console.info("UserApi: 未获取到 token，通常是因为注册成功。");
+          }
+
+          return true; // 无论有没有 token，只要 code 是 1 就代表业务成功！
         } else {
-          promptAction.showToast({ message: resObj.msg || '登录失败' });
+          promptAction.showToast({ message: resObj.msg || '操作失败' });
+          return false;
         }
+      } else {
+        promptAction.showToast({ message: `后端接口异常(HTTP ${response.responseCode})` });
+        return false;
       }
-      return false;
     } catch (err) {
-      promptAction.showToast({ message: '网络请求失败' });
+      let errMsg = err instanceof Error ? err.message : JSON.stringify(err);
+      console.error("UserApi login 底层错误:", errMsg);
+      promptAction.showToast({ message: `请求出错: ${errMsg}` });
       return false;
     } finally {
       httpRequest.destroy();
@@ -122,7 +153,7 @@ export class UserApi {
         const resObj = JSON.parse(response.result as string) as ResponseWrapper;
         let info: UserInfo | undefined = undefined;
 
-        if (resObj.data !== undefined) {
+        if (resObj.data !== undefined && resObj.data !== null) {
           info = {
             id: resObj.data.id !== undefined ? resObj.data.id : '',
             name: resObj.data.name,
@@ -158,7 +189,7 @@ export class UserApi {
     const token = await LoginStateManager.getToken();
     if (token.length === 0) return false;
 
-    let urlParams: string[] = [];
+    let urlParams: string[] =[];
     if (params.name !== undefined) {
       urlParams.push(`name=${encodeURIComponent(params.name)}`);
     }
@@ -241,7 +272,7 @@ export class UserApi {
     }
   }
 
-  // 5. 添加地址
+  // 5. 添加地址 (旧版)
   static async addAddress1(addr: AddAddressRequest): Promise<boolean> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
@@ -305,7 +336,7 @@ export class UserApi {
     } finally {
       httpRequest.destroy();
     }
-    return [];
+    return[];
   }
 
   // 8. 获取详情
@@ -378,9 +409,7 @@ export class UserApi {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
 
-    if (!token || token.length === 0) {
-      return [];
-    }
+    if (!token || token.length === 0) return[];
 
     try {
       let url = `${BASE_URL}/user/order?page=${page}&pageSize=${pageSize}`;
@@ -409,18 +438,16 @@ export class UserApi {
     } finally {
       httpRequest.destroy();
     }
-    return [];
+    return[];
   }
 
 
-  // 11. 【修复】搜索演出列表
-  // 确保使用 keyword 参数，并增强解析容错性
+  // 11. 搜索演出列表
   static async searchShow(keyword: string): Promise<ShowItem[]> {
     const httpRequest = http.createHttp();
     const token = await LoginStateManager.getToken();
 
     try {
-      // 这里的 keyword 参数名必须与 Apifox/后端一致
       const url = `${BASE_URL}/user/show/search?keyword=${encodeURIComponent(keyword)}`;
       console.info(`UserApi: 发起搜索 -> ${url}`);
 
@@ -435,18 +462,15 @@ export class UserApi {
       });
 
       if (response.responseCode === 200) {
-        // 使用 ShowFlexResponse 接口解析，避免 any 报错
         const resObj = JSON.parse(response.result as string) as ShowFlexResponse;
 
-        console.info(`UserApi: 搜索结果 -> ${JSON.stringify(resObj)}`); // 添加日志方便调试
+        console.info(`UserApi: 搜索结果 -> ${JSON.stringify(resObj)}`);
 
         if (resObj.code === 1 && resObj.data) {
-          // 情况 1: data 直接是数组
           if (Array.isArray(resObj.data)) {
             return resObj.data as ShowItem[];
           }
 
-          // 情况 2: data 是对象 (尝试读取 list, records, rows, data)
           const pageObj = resObj.data as ShowFlexData;
           if (pageObj.list && Array.isArray(pageObj.list)) return pageObj.list;
           if (pageObj.records && Array.isArray(pageObj.records)) return pageObj.records;
@@ -459,8 +483,9 @@ export class UserApi {
     } finally {
       httpRequest.destroy();
     }
-    return [];
+    return[];
   }
+
   // 12. 获取地址列表 (GET)
   static async getAddressList(page: number = 1, pageSize: number = 10): Promise<AddressItem[]> {
     const httpRequest = http.createHttp();
@@ -478,7 +503,7 @@ export class UserApi {
         }
       }
     } catch (e) {} finally { httpRequest.destroy(); }
-    return [];
+    return[];
   }
 
   // 13. 修改地址 (PUT)
@@ -507,12 +532,10 @@ export class UserApi {
           'Content-Type': 'application/json',
           'token': token
         },
-        // 这里的 params 已经是处理好的 AddressItem 对象
         extraData: params
       });
 
       if (response.responseCode === 200) {
-        // 假设返回的 code 为 1 表示成功
         const resObj = JSON.parse(response.result as string) as Record<string, Object>;
         return resObj['code'] === 1;
       }
